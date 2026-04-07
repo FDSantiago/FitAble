@@ -8,7 +8,7 @@
 	import LucideActivity from '~icons/lucide/activity';
 </script>
 
-<div class="grid h-screen place-items-center">
+<div class="grid h-screen place-items-center p-4">
 	<div class="border-2 rounded-lg p-4 w-lg grid">
 		<LucideActivity class="rounded-full bg-emerald-100 p-2 text-3xl text-emerald-400 place-self-center" />
 		<p class="mt-4 text-center text-2xl font-bold">Login to {APP_NAME}</p>
@@ -16,7 +16,7 @@
 		<LoginForm {data} />
 		<p class="mt-4 place-self-center">
 			New to {APP_NAME}? 
-			<a href={resolve("/register")} class="text-primary text-bold hover:underline">Create a student account</a>
+			<a href={resolve("/register")} class="text-primary text-bold hover:underline">Create an account</a>
 		</p>
 	</div>
 </div>
