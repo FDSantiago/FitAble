@@ -25,6 +25,13 @@ export const handleProtectedRoute: Handle = async ({ event, resolve }) => {
     flashRedirect(302, `/login?redirectTo=${event.url.pathname}`, { type: 'error', message: "Please log in to access this page." }, event.cookies);
 };
 
+export const handleDevelopmentRoute: Handle = async ({ event, resolve }) => {
+	if (!event.route.id?.startsWith('/(development)')) return resolve(event);
+	if (import.meta.env.DEV) return resolve(event);
+
+    flashRedirect(302, `/`, { type: 'error', message: "This route is only available in development." }, event.cookies);
+};
+
 export const handle: Handle = sequence(
 	handleBetterAuth,
 	handleProtectedRoute
