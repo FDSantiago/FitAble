@@ -5,21 +5,62 @@
 	import LucideTarget from '~icons/lucide/target';
 	import LucideLogOut from '~icons/lucide/log-out';
 	import LucideCamera from '~icons/lucide/camera';
+	import LucideCheck from '~icons/lucide/check';
+	import LucideX from '~icons/lucide/x';
 	import { Button } from '$lib/components/ui/button';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import * as Form from '$lib/components/ui/form';
+	import { formSchema } from './schema';
+	import { superForm } from 'sveltekit-superforms';
+	import { zod4Client } from 'sveltekit-superforms/adapters';
+	import CropModal from '$lib/components/crop-modal/crop-modal.svelte';
 
-	let { data, form } = $props();
+	let { data } = $props();
+
+	const form = superForm(data.form, {
+		validators: zod4Client(formSchema)
+	});
+
+	const { form: formData, enhance: formEnhance } = form;
+
+	let uploading = $state(false);
+	let previewUrl = $state<string | null>(null);
+	let croppedUrl = $state<string | null>(null);
+	let croppedBlob = $state<Blob | null>(null);
+	let fileInput: HTMLInputElement;
+	let isEditing = $state(false);
+	let showCropper = $state(false);
 
 	const user = {
 		name: data.user.name,
-		course: undefined,
-		id: data.user.email,
-		weight: 68,
-		height: 175,
-		bmi: 22.2,
-		bmiStatus: 'NORMAL'
+		course: undefined as string | undefined,
+		id: data.user.email
 	};
+
+	const computedProfile = $derived({
+		weight: data.profile?.weightKg ?? null,
+		height: data.profile?.heightCm ?? null,
+		age: data.profile?.age ?? null,
+		fitnessLevel: data.profile?.fitnessLevel ?? null
+	});
+
+	const bmi = $derived(() => {
+		if (!computedProfile.weight || !computedProfile.height) return null;
+		const heightInM = computedProfile.height / 100;
+		return (computedProfile.weight / (heightInM * heightInM)).toFixed(1);
+	});
+
+	const bmiStatus = $derived(() => {
+		const bmiVal = bmi();
+		if (!bmiVal) return null;
+		const bmiNum = parseFloat(bmiVal);
+		if (bmiNum < 18.5) return 'UNDERWEIGHT';
+		if (bmiNum < 25) return 'NORMAL';
+		if (bmiNum < 30) return 'OVERWEIGHT';
+		return 'OBESE';
+	});
 
 	const goals = {
 		title: 'Workout 3x a Week',
@@ -32,21 +73,31 @@
 		timeTrained: '12h'
 	};
 
-	let uploading = $state(false);
-	let previewUrl = $state<string | null>(null);
-	let fileInput: HTMLInputElement;
-
 	function handleFileSelect(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (file) {
-			previewUrl = URL.createObjectURL(file);
+			croppedUrl = URL.createObjectURL(file);
+			showCropper = true;
 		}
 	}
 
 	function triggerFileInput() {
 		fileInput?.click();
 	}
+
+	function handleCropComplete(blob: Blob) {
+		croppedBlob = blob;
+		previewUrl = URL.createObjectURL(blob);
+		showCropper = false;
+	}
+
+	$effect(() => {
+		if (data.form?.message?.type === 'success') {
+			toast.success('Profile updated successfully');
+			isEditing = false;
+		}
+	});
 </script>
 
 <div class="relative min-h-screen bg-background pb-24 text-foreground">
@@ -54,26 +105,36 @@
 		<main class="mx-auto w-full max-w-7xl">
 			<header class="mb-6 flex items-center justify-between pt-4 md:mb-8">
 				<h1 class="text-xl font-bold tracking-tight sm:text-2xl">Student Profile</h1>
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-10 w-10 rounded-full hover:bg-muted"
-					onclick={triggerFileInput}
-				>
-					<LucidePencil class="h-5 w-5 text-primary" />
-				</Button>
+				<div class="flex gap-2">
+					{#if !isEditing}
+						<Button variant="outline" size="sm" onclick={() => (isEditing = true)}>
+							<LucidePencil class="mr-1 h-4 w-4" />
+							Edit Profile
+						</Button>
+					{:else}
+						<Button variant="ghost" size="sm" onclick={() => (isEditing = false)}>
+							<LucideX class="mr-1 h-4 w-4" />
+							Cancel
+						</Button>
+					{/if}
+				</div>
 			</header>
 
 			<form
 				method="POST"
 				action="?/updateAvatar"
 				enctype="multipart/form-data"
-				use:enhance={() => {
+				use:enhance={({ formData }) => {
 					uploading = true;
+					if (croppedBlob) {
+						formData.set('avatar', croppedBlob, 'avatar.jpg');
+					}
 					return async ({ result, update }) => {
 						uploading = false;
 						if (result.type === 'success') {
 							previewUrl = null;
+							croppedUrl = null;
+							croppedBlob = null;
 							await invalidateAll();
 						} else {
 							await update();
@@ -106,14 +167,16 @@
 									<LucideUser class="h-10 w-10" />
 								</div>
 							{/if}
-							<button
-								type="button"
-								onclick={triggerFileInput}
-								class="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-								disabled={uploading}
-							>
-								<LucideCamera class="h-4 w-4" />
-							</button>
+							{#if isEditing}
+								<button
+									type="button"
+									onclick={triggerFileInput}
+									class="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+									disabled={uploading}
+								>
+									<LucideCamera class="h-4 w-4" />
+								</button>
+							{/if}
 						</div>
 
 						{#if previewUrl}
@@ -127,15 +190,13 @@
 									size="sm"
 									onclick={() => {
 										previewUrl = null;
+										croppedUrl = null;
+										croppedBlob = null;
 									}}
 								>
 									Cancel
 								</Button>
 							</div>
-						{/if}
-
-						{#if form?.error}
-							<p class="mt-2 text-sm text-destructive">{form.error}</p>
 						{/if}
 
 						<h2 class="text-lg font-bold sm:text-xl">{user.name}</h2>
@@ -147,34 +208,167 @@
 				</div>
 			</form>
 
-			<section class="mb-6">
-				<h3 class="mb-3 text-sm font-bold text-foreground">Body Metrics</h3>
-				<div class="grid grid-cols-3 gap-3">
-					<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-						<p class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-							Weight
-						</p>
-						<p class="text-lg font-bold">
-							{user.weight}<span class="text-xs font-normal text-muted-foreground">kg</span>
-						</p>
+			{#if isEditing}
+				<form method="POST" action="?/updateProfile" use:formEnhance>
+					<div class="mb-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+						<h3 class="mb-4 text-sm font-bold text-foreground">Personal Information</h3>
+
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<Form.Field {form} name="age">
+								<Form.Control>
+									{#snippet children({ props })}
+										<Form.Label>Age</Form.Label>
+										<input
+											type="number"
+											min="1"
+											max="120"
+											placeholder="Enter your age"
+											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+											bind:value={$formData.age}
+											{...props}
+										/>
+									{/snippet}
+								</Form.Control>
+								<Form.FieldErrors />
+							</Form.Field>
+
+							<Form.Field {form} name="fitnessLevel">
+								<Form.Control>
+									{#snippet children({ props })}
+										<Form.Label>Fitness Level</Form.Label>
+										<select
+											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+											bind:value={$formData.fitnessLevel}
+											{...props}
+										>
+											<option value="">Select fitness level</option>
+											<option value="beginner">Beginner</option>
+											<option value="intermediate">Intermediate</option>
+											<option value="advanced">Advanced</option>
+										</select>
+									{/snippet}
+								</Form.Control>
+								<Form.FieldErrors />
+							</Form.Field>
+
+							<Form.Field {form} name="weightKg">
+								<Form.Control>
+									{#snippet children({ props })}
+										<Form.Label>Weight (kg)</Form.Label>
+										<input
+											type="number"
+											step="0.1"
+											min="1"
+											max="500"
+											placeholder="Enter weight in kg"
+											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+											bind:value={$formData.weightKg}
+											{...props}
+										/>
+									{/snippet}
+								</Form.Control>
+								<Form.FieldErrors />
+							</Form.Field>
+
+							<Form.Field {form} name="heightCm">
+								<Form.Control>
+									{#snippet children({ props })}
+										<Form.Label>Height (cm)</Form.Label>
+										<input
+											type="number"
+											min="1"
+											max="300"
+											placeholder="Enter height in cm"
+											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+											bind:value={$formData.heightCm}
+											{...props}
+										/>
+									{/snippet}
+								</Form.Control>
+								<Form.FieldErrors />
+							</Form.Field>
+						</div>
+
+						<div class="mt-6 flex justify-end gap-2">
+							<Button type="button" variant="outline" onclick={() => (isEditing = false)}>
+								Cancel
+							</Button>
+							<Button
+								onclick={() => {
+									form.submit();
+									isEditing = false;
+								}}
+							>
+								<LucideCheck class="mr-1 h-4 w-4" />
+								Save Changes
+							</Button>
+						</div>
 					</div>
-					<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-						<p class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-							Height
-						</p>
-						<p class="text-lg font-bold">
-							{user.height}<span class="text-xs font-normal text-muted-foreground">cm</span>
-						</p>
+				</form>
+			{:else}
+				<section class="mb-6">
+					<h3 class="mb-3 text-sm font-bold text-foreground">Body Metrics</h3>
+					<div class="grid grid-cols-3 gap-3">
+						<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+							<p class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+								Weight
+							</p>
+							<p class="text-lg font-bold">
+								{computedProfile.weight ?? '--'}<span
+									class="text-xs font-normal text-muted-foreground">kg</span
+								>
+							</p>
+						</div>
+						<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+							<p class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+								Height
+							</p>
+							<p class="text-lg font-bold">
+								{computedProfile.height ?? '--'}<span
+									class="text-xs font-normal text-muted-foreground">cm</span
+								>
+							</p>
+						</div>
+						<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+							<p class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+								BMI
+							</p>
+							<p class="text-lg font-bold">{bmi() ?? '--'}</p>
+							{#if bmiStatus()}
+								<p class="text-[10px] font-bold text-primary">{bmiStatus()}</p>
+							{/if}
+						</div>
 					</div>
-					<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-						<p class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-							BMI
-						</p>
-						<p class="text-lg font-bold">{user.bmi}</p>
-						<p class="text-[10px] font-bold text-primary">{user.bmiStatus}</p>
-					</div>
-				</div>
-			</section>
+				</section>
+
+				{#if computedProfile.age || computedProfile.fitnessLevel}
+					<section class="mb-6">
+						<h3 class="mb-3 text-sm font-bold text-foreground">Fitness Info</h3>
+						<div class="grid grid-cols-2 gap-3">
+							{#if computedProfile.age}
+								<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+									<p
+										class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+									>
+										Age
+									</p>
+									<p class="text-lg font-bold">{computedProfile.age}</p>
+								</div>
+							{/if}
+							{#if computedProfile.fitnessLevel}
+								<div class="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+									<p
+										class="mb-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+									>
+										Fitness Level
+									</p>
+									<p class="text-lg font-bold capitalize">{computedProfile.fitnessLevel}</p>
+								</div>
+							{/if}
+						</div>
+					</section>
+				{/if}
+			{/if}
 
 			<section class="mb-6">
 				<h3 class="mb-3 text-sm font-bold text-foreground">Current Goals</h3>
@@ -229,3 +423,14 @@
 		</main>
 	</div>
 </div>
+
+{#if showCropper && croppedUrl}
+	<CropModal
+		src={croppedUrl}
+		onclose={() => {
+			showCropper = false;
+			croppedUrl = null;
+		}}
+		oncrop={handleCropComplete}
+	/>
+{/if}
