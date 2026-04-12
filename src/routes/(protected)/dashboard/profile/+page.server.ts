@@ -7,6 +7,13 @@ import { db } from '$lib/server/db';
 import { studentProfiles } from '$lib/server/db/app.schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '$lib/server/auth';
+import { user } from '$lib/server/db/auth.schema';
+import { z } from 'zod';
+
+const emailChangeSchema = z.object({
+	email: z.string().email('Invalid email address'),
+	password: z.string().min(1, 'Password is required')
+});
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) {
@@ -72,6 +79,40 @@ export const actions: Actions = {
 		return { success: true, form };
 	},
 
+	updateName: async ({ request, locals }) => {
+		if (!locals.user) {
+			redirect(302, '/login');
+		}
+
+		const formData = await request.formData();
+		const name = formData.get('name') as string | null;
+
+		if (!name || name.trim().length === 0) {
+			return fail(400, { error: 'Name is required' });
+		}
+
+		if (name.trim().length > 100) {
+			return fail(400, { error: 'Name is too long' });
+		}
+
+		try {
+			await auth.api.updateUser({
+				body: {
+					name: name.trim(),
+					image: locals.user.image
+				},
+				headers: {
+					cookie: request.headers.get('cookie') || ''
+				}
+			});
+		} catch (err) {
+			console.log(err);
+			return fail(500, { error: 'Failed to update name' });
+		}
+
+		return { success: true };
+	},
+
 	updateAvatar: async ({ request, locals }) => {
 		if (!locals.user) {
 			redirect(302, '/login');
@@ -113,5 +154,89 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	updateEmail: async ({ request, locals }) => {
+		if (!locals.user) {
+			redirect(302, '/login');
+		}
+
+		const formData = await request.formData();
+		const email = formData.get('email') as string | null;
+		const password = formData.get('password') as string | null;
+
+		const result = emailChangeSchema.safeParse({ email, password });
+		if (!result.success) {
+			return fail(400, { emailError: result.error.issues[0].message });
+		}
+
+		const existingUser = await db.query.user.findFirst({
+			where: eq(user.id, locals.user.id)
+		});
+
+		if (!existingUser) {
+			return fail(400, { emailError: 'User not found' });
+		}
+
+		if (existingUser.email === result.data.email) {
+			return fail(400, { emailError: 'This is already your current email!' });
+		}
+
+		const emailTaken = await db.query.user.findFirst({
+			where: eq(user.email, result.data.email)
+		});
+
+		if (emailTaken) {
+			return {
+				emailUpdateSuccess: true,
+				message: 'If the address is valid, a verification email has been sent to your new email.'
+			};
+		}
+
+		try {
+			await auth.api.verifyPassword({
+				body: {
+					password: result.data.password
+				},
+				headers: {
+					cookie: request.headers.get('cookie') || ''
+				}
+			});
+		} catch (_err) {
+			return fail(400, { emailError: 'Incorrect password' });
+		}
+
+		try {
+			await db
+				.update(user)
+				.set({
+					email: result.data.email,
+					emailVerified: false,
+					updatedAt: new Date()
+				})
+				.where(eq(user.id, locals.user.id));
+		} catch (err) {
+			console.error('Failed to update email:', err);
+			return fail(500, { emailError: 'Failed to update email' });
+		}
+
+		try {
+			auth.api.sendVerificationEmail({
+				body: {
+					email: result.data.email,
+					callbackURL: '/dashboard/profile?email_verified=true'
+				},
+				headers: {
+					cookie: request.headers.get('cookie') || ''
+				}
+			});
+		} catch (err) {
+			console.error('Failed to send verification email:', err);
+		}
+
+		return {
+			emailUpdateSuccess: true,
+			message: 'If the address is valid, a verification email has been sent to your new email.'
+		};
 	}
 };

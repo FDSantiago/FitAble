@@ -7,6 +7,8 @@
 	import LucideCamera from '~icons/lucide/camera';
 	import LucideCheck from '~icons/lucide/check';
 	import LucideX from '~icons/lucide/x';
+	import LucideMail from '~icons/lucide/mail';
+	import LucideShieldCheck from '~icons/lucide/shield-check';
 	import { Button } from '$lib/components/ui/button';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
@@ -16,6 +18,7 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import CropModal from '$lib/components/crop-modal/crop-modal.svelte';
+	import { scale } from 'svelte/transition';
 
 	let { data } = $props();
 
@@ -32,6 +35,17 @@
 	let fileInput: HTMLInputElement;
 	let isEditing = $state(false);
 	let showCropper = $state(false);
+	let isEditingEmail = $state(false);
+	let showEmailModal = $state(false);
+	let newEmail = $state('');
+	let emailPassword = $state('');
+	let emailError = $state<string | null>(null);
+	let draftData = $state({
+		age: data.profile?.age ?? '',
+		fitnessLevel: data.profile?.fitnessLevel ?? '',
+		weightKg: data.profile?.weightKg ?? '',
+		heightCm: data.profile?.heightCm ?? ''
+	});
 
 	const user = {
 		name: data.user.name,
@@ -107,12 +121,36 @@
 				<h1 class="text-xl font-bold tracking-tight sm:text-2xl">Student Profile</h1>
 				<div class="flex gap-2">
 					{#if !isEditing}
-						<Button variant="outline" size="sm" onclick={() => (isEditing = true)}>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => {
+								isEditing = true;
+								draftData = {
+									age: data.profile?.age ?? '',
+									fitnessLevel: data.profile?.fitnessLevel ?? '',
+									weightKg: data.profile?.weightKg ?? '',
+									heightCm: data.profile?.heightCm ?? ''
+								};
+							}}
+						>
 							<LucidePencil class="mr-1 h-4 w-4" />
 							Edit Profile
 						</Button>
 					{:else}
-						<Button variant="ghost" size="sm" onclick={() => (isEditing = false)}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => {
+								isEditing = false;
+								draftData = {
+									age: data.profile?.age ?? '',
+									fitnessLevel: data.profile?.fitnessLevel ?? '',
+									weightKg: data.profile?.weightKg ?? '',
+									heightCm: data.profile?.heightCm ?? ''
+								};
+							}}
+						>
 							<LucideX class="mr-1 h-4 w-4" />
 							Cancel
 						</Button>
@@ -199,11 +237,58 @@
 							</div>
 						{/if}
 
-						<h2 class="text-lg font-bold sm:text-xl">{user.name}</h2>
+						{#if isEditing}
+							<form
+								method="POST"
+								action="?/updateName"
+								use:enhance={() => {
+									return async ({ result, update }) => {
+										if (result.type === 'success') {
+											await invalidateAll();
+											toast.success('Name updated successfully');
+										}
+										await update();
+									};
+								}}
+								class="mt-3 flex w-full max-w-48 gap-2"
+							>
+								<input
+									type="text"
+									name="name"
+									value={user.name}
+									placeholder="Enter your name"
+									maxlength="100"
+									class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+								/>
+								<Button type="submit" size="sm" class="shrink-0">
+									<LucideCheck class="h-4 w-4" />
+								</Button>
+							</form>
+						{:else}
+							<h2 class="text-lg font-bold sm:text-xl">{user.name}</h2>
+						{/if}
 						<p class="text-sm text-muted-foreground">{user.course}</p>
 						<div class="mt-3 inline-flex items-center rounded-full bg-primary/10 px-3 py-1">
+							<LucideMail class="mr-1.5 h-3.5 w-3.5 text-primary" />
 							<span class="text-xs font-medium text-primary">{user.id}</span>
+							{#if isEditing}
+								<button
+									type="button"
+									onclick={() => {
+										showEmailModal = true;
+									}}
+									class="ml-1.5 rounded-full p-0.5 transition-colors hover:bg-primary/20"
+								>
+									<LucidePencil class="h-3 w-3 text-primary" />
+								</button>
+							{/if}
 						</div>
+						{#if !data.user.emailVerified}
+							<div class="mt-2 flex items-center gap-1.5 text-xs text-amber-500">
+								<LucideShieldCheck class="h-3.5 w-3.5" />
+								<span>Email not verified</span>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</form>
@@ -224,7 +309,7 @@
 											max="120"
 											placeholder="Enter your age"
 											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-											bind:value={$formData.age}
+											bind:value={draftData.age}
 											{...props}
 										/>
 									{/snippet}
@@ -238,7 +323,7 @@
 										<Form.Label>Fitness Level</Form.Label>
 										<select
 											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-											bind:value={$formData.fitnessLevel}
+											bind:value={draftData.fitnessLevel}
 											{...props}
 										>
 											<option value="">Select fitness level</option>
@@ -262,7 +347,7 @@
 											max="500"
 											placeholder="Enter weight in kg"
 											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-											bind:value={$formData.weightKg}
+											bind:value={draftData.weightKg}
 											{...props}
 										/>
 									{/snippet}
@@ -280,7 +365,7 @@
 											max="300"
 											placeholder="Enter height in cm"
 											class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-											bind:value={$formData.heightCm}
+											bind:value={draftData.heightCm}
 											{...props}
 										/>
 									{/snippet}
@@ -290,11 +375,31 @@
 						</div>
 
 						<div class="mt-6 flex justify-end gap-2">
-							<Button type="button" variant="outline" onclick={() => (isEditing = false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onclick={() => {
+									isEditing = false;
+									draftData = {
+										age: data.profile?.age ?? '',
+										fitnessLevel: data.profile?.fitnessLevel ?? '',
+										weightKg: data.profile?.weightKg ?? '',
+										heightCm: data.profile?.heightCm ?? ''
+									};
+								}}
+							>
 								Cancel
 							</Button>
 							<Button
 								onclick={() => {
+									$formData.age = draftData.age ? Number(draftData.age) : undefined;
+									$formData.fitnessLevel = draftData.fitnessLevel as
+										| 'beginner'
+										| 'intermediate'
+										| 'advanced'
+										| undefined;
+									$formData.weightKg = draftData.weightKg ? Number(draftData.weightKg) : undefined;
+									$formData.heightCm = draftData.heightCm ? Number(draftData.heightCm) : undefined;
 									form.submit();
 									isEditing = false;
 								}}
@@ -423,6 +528,102 @@
 		</main>
 	</div>
 </div>
+
+{#if showEmailModal}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+	>
+		<div class="mx-4 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg">
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-bold">Change Email Address</h2>
+				<button
+					type="button"
+					onclick={() => {
+						showEmailModal = false;
+						newEmail = '';
+						emailPassword = '';
+						emailError = null;
+					}}
+					class="rounded-full p-1 transition-colors hover:bg-muted"
+				>
+					<LucideX class="h-5 w-5" />
+				</button>
+			</div>
+
+			<p class="mb-4 text-sm text-muted-foreground">
+				To change your email, please enter your new email address and your current password for
+				verification.
+			</p>
+
+			<form
+				method="POST"
+				action="?/updateEmail"
+				use:enhance={() => {
+					return async ({ result, update }) => {
+						if (result.type === 'success' && result.data?.emailUpdateSuccess) {
+							toast.success('Verification email sent! Please check your new email.');
+							showEmailModal = false;
+							newEmail = '';
+							emailPassword = '';
+							emailError = null;
+							await invalidateAll();
+						} else if (result.type === 'failure' && result.data?.emailError) {
+							emailError = result.data.emailError as string;
+						}
+						await update();
+					};
+				}}
+				class="space-y-4"
+			>
+				<div class="space-y-2">
+					<label for="newEmail" class="text-sm font-medium">New Email Address</label>
+					<input
+						type="email"
+						id="newEmail"
+						name="email"
+						bind:value={newEmail}
+						placeholder="Enter your new email"
+						required
+						class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					/>
+				</div>
+
+				<div class="space-y-2">
+					<label for="emailPassword" class="text-sm font-medium">Current Password</label>
+					<input
+						type="password"
+						id="emailPassword"
+						name="password"
+						bind:value={emailPassword}
+						placeholder="Enter your current password"
+						required
+						class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					/>
+				</div>
+
+				{#if emailError}
+					<p class="text-sm text-destructive">{emailError}</p>
+				{/if}
+
+				<div class="flex justify-end gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						onclick={() => {
+							showEmailModal = false;
+							newEmail = '';
+							emailPassword = '';
+							emailError = null;
+						}}
+					>
+						Cancel
+					</Button>
+					<Button type="submit">Change Email</Button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 {#if showCropper && croppedUrl}
 	<CropModal
