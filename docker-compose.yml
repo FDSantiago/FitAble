@@ -2,48 +2,72 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
-    restart: always
-    ports:
-      - '5432:5432'
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: local
+      POSTGRES_USER: ${POSTGRES_USER:-fitable}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-fitable}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U root -d local']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-fitable}']
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - fitable-network
 
   # SvelteKit Application
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: always
+    restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '${APP_PORT:-3000}:3000'
     environment:
-      # Database connection
-      DATABASE_URL: 'postgres://root:mysecretpassword@db:5432/local'
-      # Origin URL for the app
-      ORIGIN: 'http://localhost:3000'
-      # Better Auth secret (change in production!)
-      BETTER_AUTH_SECRET: '8ddwN8mJsLjH4^SnzkES1C&!Gt*9sYvm1ojd5r5!426%g8K311@C7HFXfIft6i%s4d9r5qi#yij5Evox3#JXIPrUQV1nlosD6RFw0s*Svp2@^0%7745XyfM!OaYYvH'
-      # Email configuration (update with your SMTP credentials)
-      SMTP_USERNAME: 'T6c17PyltGYD0fJUglQ44DU7xaA5Y9yMoV1W6ItlCVCjjjLe24IJFzI32fUmK6jV'
-      SMTP_PASSWORD: 't9gr0n6tm9hpAxAdL1XGwgsMuwcqWmY47KDRc8O1ZO9pZ6aQl4j9l9INcO23vF7K'
-      # Node environment
-      NODE_ENV: 'production'
+      # Database
+      DATABASE_URL: postgres://${POSTGRES_USER:-fitable}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-fitable}
+
+      # Application
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+
+      # Better Auth
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${ORIGIN:-http://localhost:3000}
+
+      # Email (SMTP)
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM: ${SMTP_FROM:-noreply@fitable.app}
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      # Optional: mount for development (comment out for production)
-      - .:/app
-      - /app/node_modules
+    networks:
+      - fitable-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
-  pgdata:
+  postgres_data:
+    driver: local
+
+networks:
+  fitable-network:
+    driver: bridge
