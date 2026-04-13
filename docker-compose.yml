@@ -24,7 +24,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - '${APP_PORT:-3000}:3000'
+      #- '${APP_PORT:-3000}:3000'
     environment:
       # Database
       DATABASE_URL: postgres://${POSTGRES_USER:-fitable}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-fitable}
@@ -32,7 +32,7 @@ services:
       # Application
       ORIGIN: ${ORIGIN:-http://localhost:3000}
       NODE_ENV: production
-      PORT: 3000
+      PORT: '${APP_PORT:-3000}:3000'
       HOST: 0.0.0.0
 
       # Better Auth
