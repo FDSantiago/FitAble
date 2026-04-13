@@ -1,30 +1,30 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lock* package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+COPY package.json bun.lock* ./
 
-# Install dependencies (try npm by default, adjust if using a different package manager)
-RUN npm ci
+# Install dependencies
+RUN bun install
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN bun run build
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM oven/bun:1-alpine AS runner
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lock* package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+COPY package.json bun.lock* ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN bun install --production
 
 # Copy built application from builder stage
 COPY --from=builder /app/build ./build
@@ -38,4 +38,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Start the application
-CMD ["node", "build"]
+CMD ["bun", "run", "build"]
