@@ -3,6 +3,9 @@ FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
+# Install Python and build tools for native modules like better-sqlite3
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package.json bun.lock* ./
 
