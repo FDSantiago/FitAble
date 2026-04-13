@@ -1,6 +1,9 @@
 # Build stage
 FROM oven/bun:1-alpine AS builder
 
+# Install dependencies for native modules (better-sqlite3, etc.)
+RUN apk add --no-cache python3 make g++ gcc musl-dev linux-headers
+
 WORKDIR /app
 
 # Copy package files
