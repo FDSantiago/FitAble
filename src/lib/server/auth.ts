@@ -5,7 +5,6 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
-import { SMTP_PASSWORD, SMTP_USERNAME } from '$env/static/private';
 import { APP_NAME, BASE_URL } from '$lib/config';
 
 const smtpTransporter = nodemailer.createTransport({
@@ -13,8 +12,8 @@ const smtpTransporter = nodemailer.createTransport({
 	port: 465,
 	secure: true,
 	auth: {
-		user: SMTP_USERNAME,
-		pass: SMTP_PASSWORD
+		user: env.SMTP_USERNAME,
+		pass: env.SMTP_PASSWORD
 	}
 });
 
