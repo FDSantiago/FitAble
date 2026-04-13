@@ -38,6 +38,7 @@
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^24",
+		"@vitejs/plugin-basic-ssl": "^2.3.0",
 		"@vitest/browser-playwright": "^4.1.0",
 		"better-auth": "~1.4.21",
 		"bits-ui": "^2.16.3",
@@ -70,6 +71,7 @@
 		"unplugin-icons": "^23.0.1",
 		"vite": "^7.3.1",
 		"vite-plugin-devtools-json": "^1.0.0",
+		"vite-plugin-mkcert": "^2.0.0",
 		"vitest": "^4.1.0",
 		"vitest-browser-svelte": "^2.0.2"
 	},

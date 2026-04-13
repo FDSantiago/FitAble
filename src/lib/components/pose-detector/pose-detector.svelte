@@ -52,13 +52,22 @@
 		onRepCount = () => {},
 		onFormFeedback = () => {},
 		onStateChange = () => {},
-		onAngleUpdate = () => {}
+		onAngleUpdate = () => {},
+		onSafetyAlert = () => {},
+		badFormThreshold = 70,
+		badFormAlertDelay = 5000
 	}: {
 		exercise?: 'pushup' | 'squat' | 'situp' | 'jumpingjack';
 		onRepCount?: (count: number) => void;
 		onFormFeedback?: (feedback: string, score: number) => void;
 		onStateChange?: (state: 'ready' | 'down' | 'up') => void;
 		onAngleUpdate?: (angle: number) => void;
+		/** Called when bad form is sustained for badFormAlertDelay ms */
+		onSafetyAlert?: (durationMs: number) => void;
+		/** Form score (0-100) below which bad-form tracking begins. Default: 70 */
+		badFormThreshold?: number;
+		/** Milliseconds of sustained bad form before alert fires. Default: 5000 */
+		badFormAlertDelay?: number;
 	} = $props();
 
 	let videoElement: HTMLVideoElement;
@@ -75,6 +84,11 @@
 	let currentExerciseState: 'ready' | 'down' | 'up' = 'ready';
 	let lastStateChangeTime = 0;
 	let formScores: number[] = [];
+
+	// Safety alert tracking
+	let badFormStartTime: number | null = null;
+	let safetyAlertFired = false;
+	let badFormDuration = $state(0); // milliseconds of sustained bad form
 
 	const POSE_CONFIDENCE_THRESHOLD = 0.5;
 	//const REP_COUNT_COOLDOWN = 500;
@@ -247,7 +261,7 @@
 				formScores.push(calculateFormScore(currentAngle, currentExerciseState));
 			}
 
-			if (currentExerciseState === 'down' && newState === 'up') {
+			if (currentExerciseState === 'down' && newState !== 'down') {
 				repCount++;
 				onRepCount(repCount);
 			}
@@ -259,7 +273,7 @@
 
 		const formScore = calculateFormScore(currentAngle, currentExerciseState);
 		const feedbackText =
-			formScore < 70
+			formScore < badFormThreshold
 				? 'Watch your form'
 				: currentExerciseState === 'ready'
 					? 'Get into position'
@@ -268,6 +282,24 @@
 						: 'Full extension';
 
 		onFormFeedback(feedbackText, formScore);
+
+		// Safety alert: track sustained bad form
+		if (formScore < badFormThreshold && currentExerciseState !== 'ready') {
+			if (badFormStartTime === null) {
+				badFormStartTime = now;
+				safetyAlertFired = false;
+			}
+			badFormDuration = now - badFormStartTime;
+			if (!safetyAlertFired && badFormDuration >= badFormAlertDelay) {
+				safetyAlertFired = true;
+				onSafetyAlert(badFormDuration);
+			}
+		} else {
+			// Form is good — reset tracker so alert can fire again next time
+			badFormStartTime = null;
+			safetyAlertFired = false;
+			badFormDuration = 0;
+		}
 	}
 
 	function drawPoseSkeleton(landmarks: Landmark[], results: PoseResults): void {
@@ -351,8 +383,8 @@
 				smoothLandmarks: true,
 				enableSegmentation: false,
 				smoothSegmentation: false,
-				minDetectionConfidence: 0.5,
-				minTrackingConfidence: 0.5
+				minDetectionConfidence: 0.3,
+				minTrackingConfidence: 0.3
 			});
 
 			pose.onResults(processResults);
@@ -414,7 +446,8 @@
 		detectionStatus,
 		currentAngle,
 		repCount,
-		currentExerciseState as currentState
+		currentExerciseState as currentState,
+		badFormDuration
 	};
 
 	onMount(() => {
@@ -428,8 +461,8 @@
 	});
 </script>
 
-<div class="pose-detector relative w-full overflow-hidden rounded-2xl bg-black">
-	<video bind:this={videoElement} class="opacity-0 h-[50%] w-[50%] object-contain" autoplay muted playsinline
+<div class="pose-detector relative w-full overflow-hidden rounded-2xl bg-black" style="aspect-ratio: 4/3;">
+	<video bind:this={videoElement} class="absolute inset-0 h-full w-full object-contain" autoplay muted playsinline
 	></video>
 	<canvas bind:this={canvasElement} class="absolute inset-0 h-full w-full" width="640" height="480"
 	></canvas>

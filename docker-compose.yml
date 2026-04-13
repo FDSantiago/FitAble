@@ -1,0 +1,49 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: local
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U root -d local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # SvelteKit Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      # Database connection
+      DATABASE_URL: 'postgres://root:mysecretpassword@db:5432/local'
+      # Origin URL for the app
+      ORIGIN: 'http://localhost:3000'
+      # Better Auth secret (change in production!)
+      BETTER_AUTH_SECRET: '8ddwN8mJsLjH4^SnzkES1C&!Gt*9sYvm1ojd5r5!426%g8K311@C7HFXfIft6i%s4d9r5qi#yij5Evox3#JXIPrUQV1nlosD6RFw0s*Svp2@^0%7745XyfM!OaYYvH'
+      # Email configuration (update with your SMTP credentials)
+      SMTP_USERNAME: 'T6c17PyltGYD0fJUglQ44DU7xaA5Y9yMoV1W6ItlCVCjjjLe24IJFzI32fUmK6jV'
+      SMTP_PASSWORD: 't9gr0n6tm9hpAxAdL1XGwgsMuwcqWmY47KDRc8O1ZO9pZ6aQl4j9l9INcO23vF7K'
+      # Node environment
+      NODE_ENV: 'production'
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Optional: mount for development (comment out for production)
+      # - .:/app
+      # - /app/node_modules
+
+volumes:
+  pgdata:

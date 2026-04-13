@@ -76,16 +76,16 @@
 		return 'OBESE';
 	});
 
-	const goals = {
-		title: 'Workout 3x a Week',
-		progress: 2,
-		target: 3
-	};
+	const goals = $derived({
+		title: `Workout ${data.profile?.weeklyWorkoutGoal ?? 3}x a Week`,
+		progress: data.stats.thisWeekCount,
+		target: data.profile?.weeklyWorkoutGoal ?? 3
+	});
 
-	const stats = {
-		totalWorkouts: 24,
-		timeTrained: '12h'
-	};
+	const stats = $derived({
+		totalWorkouts: data.stats.totalWorkouts,
+		timeTrained: data.stats.timeTrained
+	});
 
 	function handleFileSelect(e: Event) {
 		const target = e.target as HTMLInputElement;

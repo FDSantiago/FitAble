@@ -4,14 +4,14 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { formSchema } from './schema';
 import { db } from '$lib/server/db';
-import { studentProfiles } from '$lib/server/db/app.schema';
-import { eq } from 'drizzle-orm';
+import { studentProfiles, workoutSessions } from '$lib/server/db/app.schema';
+import { eq, and, gte, sql } from 'drizzle-orm';
 import { auth } from '$lib/server/auth';
 import { user } from '$lib/server/db/auth.schema';
 import { z } from 'zod';
 
 const emailChangeSchema = z.object({
-	email: z.string().email('Invalid email address'),
+	email: z.email('Invalid email address'),
 	password: z.string().min(1, 'Password is required')
 });
 
@@ -20,9 +20,46 @@ export const load: PageServerLoad = async (event) => {
 		redirect(302, '/login');
 	}
 
+	const userId = event.locals.user.id;
+
 	const profile = await db.query.studentProfiles.findFirst({
-		where: eq(studentProfiles.userId, event.locals.user.id)
+		where: eq(studentProfiles.userId, userId)
 	});
+
+	// --- Lifetime stats ---
+	const lifetimeRows = await db
+		.select({
+			totalSessions: sql<number>`count(*)::int`,
+			totalMinutes: sql<number>`coalesce(sum(${workoutSessions.durationMinutes}), 0)::int`
+		})
+		.from(workoutSessions)
+		.where(eq(workoutSessions.userId, userId));
+
+	const lifetimeTotalSessions = lifetimeRows[0]?.totalSessions ?? 0;
+	const lifetimeTotalMinutes = lifetimeRows[0]?.totalMinutes ?? 0;
+
+	// --- Current week's workout count ---
+	const now = new Date();
+	const dayOfWeek = now.getDay();
+	const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+	const thisWeekStart = new Date(now);
+	thisWeekStart.setDate(now.getDate() + diffToMonday);
+	thisWeekStart.setHours(0, 0, 0, 0);
+
+	const thisWeekRows = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(workoutSessions)
+		.where(and(eq(workoutSessions.userId, userId), gte(workoutSessions.sessionDateTime, thisWeekStart)));
+
+	const thisWeekCount = thisWeekRows[0]?.count ?? 0;
+
+	// Format total time for display
+	function formatTotalTime(totalMins: number): string {
+		if (totalMins < 60) return `${totalMins}m`;
+		const hours = Math.floor(totalMins / 60);
+		const mins = totalMins % 60;
+		return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+	}
 
 	return {
 		form: await superValidate(zod4(formSchema)),
@@ -32,9 +69,14 @@ export const load: PageServerLoad = async (event) => {
 					weightKg: profile.weightKg ? Number(profile.weightKg) : undefined,
 					heightCm: profile.heightCm ? Number(profile.heightCm) : undefined,
 					fitnessLevel: profile.fitnessLevel ?? undefined,
-					weeklyWorkoutGoal: profile.weeklyWorkoutGoal ?? undefined
+					weeklyWorkoutGoal: profile.weeklyWorkoutGoal ?? 3
 				}
-			: null
+			: null,
+		stats: {
+			totalWorkouts: lifetimeTotalSessions,
+			timeTrained: formatTotalTime(lifetimeTotalMinutes),
+			thisWeekCount
+		}
 	};
 };
 

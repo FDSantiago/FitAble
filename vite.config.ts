@@ -4,9 +4,10 @@ import devtoolsJson from 'vite-plugin-devtools-json';
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import Icons from 'unplugin-icons/vite';
+import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit(), devtoolsJson(), Icons({ compiler: 'svelte' })],
+	plugins: [tailwindcss(), sveltekit(), devtoolsJson(), Icons({ compiler: 'svelte' }), basicSsl()],
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
