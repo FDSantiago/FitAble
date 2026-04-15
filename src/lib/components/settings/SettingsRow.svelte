@@ -42,8 +42,10 @@
 	}
 </script>
 
-<div class="settings-row">
-	<div class="icon-wrap">
+<div
+	class="flex cursor-pointer items-center gap-3 p-4 transition-colors duration-150 hover:bg-muted/50"
+>
+	<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/50">
 		<Icon class="h-4 w-4" />
 	</div>
 	<span class="flex-1 text-sm font-semibold">{setting.label}</span>
@@ -55,9 +57,10 @@
 			{#each setting.options as option}
 				<button
 					type="button"
-					class="camera-chip {(value as string) === option
-						? 'camera-chip-active'
-						: 'camera-chip-inactive'}"
+					class="cursor-pointer rounded-full border border-transparent px-3 py-1 text-xs font-semibold transition-colors duration-150 {(value as string) ===
+					option
+						? 'border-primary/40 bg-primary/10 text-primary'
+						: 'border-border bg-transparent text-muted-foreground hover:border-primary/30 hover:text-primary/80'}"
 					onclick={() => handleSelectChange(option)}
 				>
 					{option}
@@ -66,55 +69,3 @@
 		</div>
 	{/if}
 </div>
-
-<style>
-	.settings-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 1rem;
-		cursor: pointer;
-		transition: background-color 0.15s;
-	}
-	.settings-row:hover {
-		background-color: hsl(var(--muted) / 0.5);
-	}
-
-	.icon-wrap {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: 0.625rem;
-		flex-shrink: 0;
-		background-color: hsl(var(--muted) / 0.5);
-	}
-
-	.camera-chip {
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 600;
-		border: 1.5px solid transparent;
-		cursor: pointer;
-		transition:
-			background-color 0.15s,
-			color 0.15s,
-			border-color 0.15s;
-	}
-	.camera-chip-active {
-		color: hsl(var(--primary));
-		border-color: hsl(var(--primary) / 0.4);
-		background-color: hsl(var(--primary) / 0.08);
-	}
-	.camera-chip-inactive {
-		color: hsl(var(--muted-foreground));
-		border-color: hsl(var(--border));
-		background-color: transparent;
-	}
-	.camera-chip-inactive:hover {
-		border-color: hsl(var(--primary) / 0.3);
-		color: hsl(var(--primary) / 0.8);
-	}
-</style>

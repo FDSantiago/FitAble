@@ -35,7 +35,13 @@ const CATEGORY_COOLDOWNS: Record<string, number> = {
 	session: 0
 };
 
-let recentUtteredWord = "";
+const RECENT_WORDS = {
+	WORKOUT_STARTED: 'workout-started',
+	WORKOUT_ENDED: 'workout-ended',
+	WATCH_FORM: 'watch-form'
+} as const;
+
+let recentUtteredWord = '';
 
 class VoiceCoachService {
 	private enabled = true;
@@ -51,9 +57,7 @@ class VoiceCoachService {
 				const voices = window.speechSynthesis.getVoices();
 				// Prefer an English voice
 				this.preferredVoice =
-					voices.find(
-						(v) => v.lang.startsWith('en') && v.localService
-					) ??
+					voices.find((v) => v.lang.startsWith('en') && v.localService) ??
 					voices.find((v) => v.lang.startsWith('en')) ??
 					voices[0] ??
 					null;
@@ -156,14 +160,14 @@ class VoiceCoachService {
 	// ─── Convenience helpers ───────────────────────────────────────────────
 
 	sayWorkoutStarted(exerciseName: string): void {
-		if (recentUtteredWord == "workout-started") return;
-		recentUtteredWord = "workout-started"
+		if (recentUtteredWord === RECENT_WORDS.WORKOUT_STARTED) return;
+		recentUtteredWord = RECENT_WORDS.WORKOUT_STARTED;
 		this.speak(`${exerciseName} started. Let's go!`, 'session', 'normal');
 	}
 
 	sayWorkoutEnded(): void {
-		if (recentUtteredWord == "workout-ended") return;
-		recentUtteredWord = "workout-ended"
+		if (recentUtteredWord === RECENT_WORDS.WORKOUT_ENDED) return;
+		recentUtteredWord = RECENT_WORDS.WORKOUT_ENDED;
 		this.speak('Workout complete. Nice job!', 'session', 'normal');
 	}
 
@@ -187,8 +191,8 @@ class VoiceCoachService {
 	}
 
 	sayFormWarning(score: number): void {
-		if (recentUtteredWord == "watch-form") return;
-		recentUtteredWord = "watch-form"
+		if (recentUtteredWord === RECENT_WORDS.WATCH_FORM) return;
+		recentUtteredWord = RECENT_WORDS.WATCH_FORM;
 		if (score < 70) {
 			this.speak('Watch your form', 'form', 'normal');
 		}

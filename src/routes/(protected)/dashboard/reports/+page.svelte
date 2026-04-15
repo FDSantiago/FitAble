@@ -18,9 +18,9 @@
 	}
 
 	function scoreColor(score: number): string {
-		if (score >= 85) return 'var(--color-primary, #10b981)';
-		if (score >= 70) return '#f59e0b';
-		return '#ef4444';
+		if (score >= 85) return 'hsl(var(--primary))';
+		if (score >= 70) return 'hsl(var(--warning, 38 92% 50%))';
+		return 'hsl(var(--destructive))';
 	}
 
 	function scoreClass(score: number): string {
@@ -251,7 +251,7 @@
 						{#each data.sessions as session (session.id)}
 							<button
 								type="button"
-								class="group flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-4 text-left shadow-sm transition-colors hover:bg-muted/50 active:bg-muted"
+								class="group flex w-full cursor-pointer items-center justify-between rounded-2xl border border-border bg-card px-4 py-4 text-left shadow-sm transition-colors hover:bg-muted/50 active:bg-muted"
 								onclick={() => {
 									selectedSession = selectedSession?.id === session.id ? null : session;
 								}}

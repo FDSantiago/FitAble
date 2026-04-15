@@ -374,7 +374,7 @@
 				</p>
 			</section>
 
-			<div class="grid grid-cols-4 gap-3">
+			<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
 				{#each ['pushup', 'squat', 'situp', 'jumpingjack'] as exercise (exercise)}
 					<button
 						type="button"
@@ -383,6 +383,7 @@
 							? 'border-primary bg-primary/5'
 							: 'border-border hover:border-primary/50'}"
 						onclick={() => selectExercise(exercise as Exercise)}
+						aria-label="Select {getExerciseName(exercise as Exercise)} exercise"
 					>
 						<span class="text-3xl">{getExerciseIcon(exercise as Exercise)}</span>
 						<span class="text-xs font-bold">{getExerciseName(exercise as Exercise)}</span>
@@ -398,26 +399,24 @@
 							<strong>Push-ups:</strong> Keep your body straight, lower until your elbows are at 90 degrees,
 							then push up.
 						</p>
-						<p class="text-muted-foreground/70">Target angle: ~90° at bottom, ~180° at top</p>
+						<p class="text-muted-foreground/70">Target angle: 70-110° at bottom, 160-180° at top</p>
 					{:else if selectedExercise === 'squat'}
 						<p>
 							<strong>Squats:</strong> Stand with feet shoulder-width apart, lower until thighs are parallel
 							to ground.
 						</p>
-						<p class="text-muted-foreground/70">Target angle: ~90° at bottom, ~180° at top</p>
+						<p class="text-muted-foreground/70">Target angle: 70-110° at bottom, 160-180° at top</p>
 					{:else if selectedExercise === 'situp'}
 						<p>
 							<strong>Sit-ups:</strong> Lie on your back, knees bent, raise your torso to your knees.
 						</p>
-						<p class="text-muted-foreground/70">Target angle: ~60° at bottom, ~120°+ at top</p>
+						<p class="text-muted-foreground/70">Target angle: 70-110° at bottom, 160-180° at top</p>
 					{:else if selectedExercise === 'jumpingjack'}
 						<p>
 							<strong>Jumping Jacks:</strong> Jump while spreading legs and raising arms overhead, then
 							return to starting position.
 						</p>
-						<p class="text-muted-foreground/70">
-							Target angle: Arms together at top (~45°), arms apart at bottom (~165°)
-						</p>
+						<p class="text-muted-foreground/70">Target angle: 70-110° at bottom, 160-180° at top</p>
 					{/if}
 				</div>
 			</section>
@@ -461,14 +460,6 @@
 				return async ({ result, update }) => {
 					workoutCompletionResult = result;
 					isSaving = false;
-					// if (result.type === 'success') {
-					// 	toast.success('Workout saved! 🎉');
-					// } else if (result.type === 'failure') {
-					// 	const msg = (result.data as Record<string, string>)?.error ?? 'Failed to save workout.';
-					// 	toast.error(msg);
-					// } else {
-					// 	toast.error('Something went wrong saving your workout.');
-					// }
 					await update({ reset: false });
 				};
 			}}
@@ -516,7 +507,7 @@
 						{#if isSaving}
 							<p class="mt-1 animate-pulse text-xs text-primary">Saving to your records…</p>
 						{:else}
-							<p class="mt-1 flex items-center justify-center gap-1 text-xs text-green-500">
+							<p class="mt-1 flex items-center justify-center gap-1 text-xs text-emerald-500">
 								<LucideCheck class="h-3 w-3" /> Saved
 							</p>
 						{/if}
@@ -534,8 +525,8 @@
 					<div class="rounded-xl border border-border bg-card p-4 text-center">
 						<p
 							class="text-3xl font-black {completedWorkout.avgFormScore >= 70
-								? 'text-green-500'
-								: 'text-yellow-500'}"
+								? 'text-emerald-500'
+								: 'text-amber-500'}"
 						>
 							{completedWorkout.avgFormScore}%
 						</p>
@@ -596,9 +587,11 @@
 
 				{#if safetyAlertVisible}
 					<div
-						class="safety-alert-overlay absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-red-900/70 text-white backdrop-blur-sm"
+						class="safety-alert-overlay absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-destructive/70 text-white backdrop-blur-sm"
 					>
-						<div class="safety-alert-icon rounded-full bg-red-500 p-4 shadow-lg shadow-red-500/50">
+						<div
+							class="safety-alert-icon rounded-full bg-destructive p-4 shadow-lg shadow-destructive/50"
+						>
 							<LucideShieldAlert class="h-10 w-10" />
 						</div>
 						<div class="px-6 text-center">
@@ -640,10 +633,10 @@
 					<span
 						class="rounded-full px-2 py-0.5 text-[10px] font-bold text-white {exerciseState ===
 						'down'
-							? 'bg-green-500'
+							? 'bg-emerald-500'
 							: exerciseState === 'up'
 								? 'bg-blue-500'
-								: 'bg-yellow-500'}"
+								: 'bg-amber-500'}"
 					>
 						{exerciseState === 'down' ? 'Down' : exerciseState === 'up' ? 'Up' : 'Ready'}
 					</span>
@@ -659,8 +652,8 @@
 					<div class="rounded-xl border border-border bg-card p-2 text-center">
 						<p
 							class="text-2xl font-black {formFeedback.score >= 70
-								? 'text-green-500'
-								: 'text-yellow-500'}"
+								? 'text-emerald-500'
+								: 'text-amber-500'}"
 						>
 							{formFeedback.score}%
 						</p>
@@ -702,10 +695,10 @@
 						<span class="text-sm font-bold">{getExerciseName(selectedExercise)}</span>
 						<span
 							class="rounded-full px-2 py-0.5 text-xs font-bold text-white {exerciseState === 'down'
-								? 'bg-green-500'
+								? 'bg-emerald-500'
 								: exerciseState === 'up'
 									? 'bg-blue-500'
-									: 'bg-yellow-500'}"
+									: 'bg-amber-500'}"
 						>
 							{exerciseState === 'down' ? 'Down' : exerciseState === 'up' ? 'Up' : 'Ready'}
 						</span>
@@ -722,8 +715,8 @@
 					<div class="rounded-xl border border-border bg-card p-3 text-center">
 						<p
 							class="text-3xl font-black {formFeedback.score >= 70
-								? 'text-green-500'
-								: 'text-yellow-500'}"
+								? 'text-emerald-500'
+								: 'text-amber-500'}"
 						>
 							{formFeedback.score}%
 						</p>

@@ -461,8 +461,16 @@
 	});
 </script>
 
-<div class="pose-detector relative overflow-hidden rounded-2xl bg-black object-contain w-full h-full">
-	<video bind:this={videoElement} class="absolute inset-0 h-full w-full object-contain" autoplay muted playsinline
+<div
+	class="pose-detector relative h-full w-full overflow-hidden rounded-2xl bg-black object-contain"
+>
+	<video
+		bind:this={videoElement}
+		class="absolute inset-0 h-full w-full object-contain"
+		autoplay
+		muted
+		playsinline
+		aria-label="Camera feed for exercise detection"
 	></video>
 	<canvas bind:this={canvasElement} class="absolute inset-0 h-full w-full" width="640" height="480"
 	></canvas>

@@ -10,6 +10,7 @@
 	import LucideMail from '~icons/lucide/mail';
 	import LucideShieldCheck from '~icons/lucide/shield-check';
 	import { Button } from '$lib/components/ui/button';
+	import Input from '$lib/components/ui/input/input.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -603,27 +604,25 @@
 			>
 				<div class="space-y-2">
 					<label for="newEmail" class="text-sm font-medium">New Email Address</label>
-					<input
+					<Input
 						type="email"
 						id="newEmail"
 						name="email"
 						bind:value={newEmail}
 						placeholder="Enter your new email"
 						required
-						class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 					/>
 				</div>
 
 				<div class="space-y-2">
 					<label for="emailPassword" class="text-sm font-medium">Current Password</label>
-					<input
+					<Input
 						type="password"
 						id="emailPassword"
 						name="password"
 						bind:value={emailPassword}
 						placeholder="Enter your current password"
 						required
-						class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 					/>
 				</div>
 

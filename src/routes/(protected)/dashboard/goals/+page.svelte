@@ -7,6 +7,7 @@
 	import LucideCalendar from '~icons/lucide/calendar';
 	import LucideClock from '~icons/lucide/clock';
 	import { Button } from '$lib/components/ui/button';
+	import Input from '$lib/components/ui/input/input.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -95,7 +96,9 @@
 					<div class="flex flex-col gap-4">
 						{#each data.activeGoals as goal (goal.id)}
 							{@const status = getGoalStatus(goal)}
-							<div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
+							<div
+								class="rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+							>
 								<div class="mb-3 flex items-start justify-between">
 									<div class="flex items-center gap-3">
 										<div
@@ -286,10 +289,9 @@
 					<Form.Control>
 						{#snippet children({ props })}
 							<Form.Label>Goal Title</Form.Label>
-							<input
+							<Input
 								type="text"
 								placeholder="e.g., Build workout consistency"
-								class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 								bind:value={draftData.title}
 								{...props}
 							/>
@@ -302,11 +304,10 @@
 					<Form.Control>
 						{#snippet children({ props })}
 							<Form.Label>Target Workouts</Form.Label>
-							<input
+							<Input
 								type="number"
 								min="1"
 								placeholder="e.g., 20"
-								class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 								bind:value={draftData.targetWorkouts}
 								{...props}
 							/>
@@ -319,12 +320,11 @@
 					<Form.Control>
 						{#snippet children({ props })}
 							<Form.Label>Duration (days)</Form.Label>
-							<input
+							<Input
 								type="number"
 								min="7"
 								max="365"
 								placeholder="e.g., 30"
-								class="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 								bind:value={draftData.daysDuration}
 								{...props}
 							/>

@@ -291,9 +291,3 @@
 		</main>
 	</div>
 </div>
-
-<style>
-	.pb-safe {
-		padding-bottom: env(safe-area-inset-bottom);
-	}
-</style>

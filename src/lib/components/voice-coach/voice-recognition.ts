@@ -59,14 +59,16 @@ interface SpeechRecognitionAlternative {
 	confidence: number;
 }
 
-// Command keyword maps — longer / more-specific phrases first
+// Command keyword maps — more-specific phrases checked before general ones
 const COMMAND_PATTERNS: Array<{ patterns: string[]; command: VoiceCommand }> = [
 	{ patterns: ['finish set', 'next set', 'complete set', 'done set'], command: 'finish-set' },
 	{ patterns: ['end workout', 'stop workout', 'finish workout'], command: 'end-workout' },
+	{ patterns: ["let's stop", 'lets stop', 'stop workout'], command: 'end-workout' },
+	{ patterns: ["let's go", 'lets go', 'begin workout'], command: 'start' },
 	{ patterns: ['reset reps', 'reset rep', 'reset'], command: 'reset' },
 	{ patterns: ['voice on', 'unmute', 'enable voice', 'sound on'], command: 'unmute' },
 	{ patterns: ['voice off', 'mute', 'quiet', 'silence', 'sound off'], command: 'mute' },
-	{ patterns: ["let's go", 'lets go', 'start', 'begin', 'begin workout', 'go'], command: 'start' },
+	{ patterns: ['start', 'begin', 'go'], command: 'start' },
 	{ patterns: ['stop', 'finish'], command: 'end-workout' }
 ];
 
