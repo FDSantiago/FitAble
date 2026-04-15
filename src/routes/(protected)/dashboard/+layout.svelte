@@ -5,6 +5,7 @@
 	import LucideCamera from '~icons/lucide/camera';
 	import LucideBarChart2 from '~icons/lucide/bar-chart-2';
 	import LucideSettings from '~icons/lucide/settings';
+	import LucideTarget from '~icons/lucide/target';
 	import { resolve } from '$app/paths';
 
 	let { children } = $props();
@@ -23,17 +24,17 @@
 		</a>
 
 		<a
-			href={resolve('/dashboard/reports')}
+			href={resolve('/dashboard/goals')}
 			class="flex flex-col items-center gap-1 {$page.url.pathname.startsWith(
-				resolve('/dashboard/reports')
+				resolve('/dashboard/goals')
 			)
 				? 'text-primary'
 				: 'text-muted-foreground'}"
 		>
-			<LucideBarChart2 />
-			<span class="font-bold">Reports</span>
+			<LucideTarget />
+			<span class="font-bold">Goals</span>
 		</a>
-		
+
 		<div class="relative flex w-12 justify-center sm:w-16">
 			<a
 				href={resolve('/workout')}
@@ -44,6 +45,18 @@
 				<LucideCamera />
 			</a>
 		</div>
+
+		<a
+			href={resolve('/dashboard/reports')}
+			class="flex flex-col items-center gap-1 {$page.url.pathname.startsWith(
+				resolve('/dashboard/reports')
+			)
+				? 'text-primary'
+				: 'text-muted-foreground'}"
+		>
+			<LucideBarChart2 />
+			<span class="font-bold">Reports</span>
+		</a>
 
 		<a
 			href={resolve('/dashboard/profile')}

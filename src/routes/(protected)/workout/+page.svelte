@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { PoseDetector } from '$lib/components/pose-detector/index.js';
 	import Button from '$lib/components/ui/button/button.svelte';
+	import PerformanceChart from '$lib/components/ui/charts/performance-chart.svelte';
 	import LucideArrowLeft from '~icons/lucide/arrow-left';
 	import LucideRotateCcw from '~icons/lucide/rotate-ccw';
 	import LucidePlay from '~icons/lucide/play';
@@ -16,7 +17,10 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { voiceCoach } from '$lib/components/voice-coach/voice-coach';
-	import { voiceRecognition, type VoiceCommand } from '$lib/components/voice-coach/voice-recognition';
+	import {
+		voiceRecognition,
+		type VoiceCommand
+	} from '$lib/components/voice-coach/voice-recognition';
 
 	type Exercise = 'pushup' | 'squat' | 'situp' | 'jumpingjack';
 
@@ -57,6 +61,8 @@
 	let lastTranscript = $state('');
 	let transcriptTimer: ReturnType<typeof setTimeout> | null = null;
 
+	let workoutCompletionResult = $state({});
+
 	function selectExercise(exercise: Exercise) {
 		if (isSessionActive) return;
 		selectedExercise = exercise;
@@ -94,14 +100,15 @@
 		// Flush any in-progress set
 		const finalSets = [...sets];
 		if (currentSetReps > 0) {
-			finalSets.push({ reps: currentSetReps, formScore: Math.round(formScoreRunningSum / Math.max(formScoreSampleCount, 1)) });
+			finalSets.push({
+				reps: currentSetReps,
+				formScore: Math.round(formScoreRunningSum / Math.max(formScoreSampleCount, 1))
+			});
 		}
 
 		const totalReps = finalSets.reduce((sum, s) => sum + s.reps, 0);
 		const avgFormScore =
-			formScoreSampleCount > 0
-				? Math.round(formScoreRunningSum / formScoreSampleCount)
-				: 100;
+			formScoreSampleCount > 0 ? Math.round(formScoreRunningSum / formScoreSampleCount) : 100;
 
 		// Snapshot data for the hidden form
 		completedWorkout = {
@@ -229,9 +236,9 @@
 		const isNowListening = voiceRecognition.toggle();
 		voiceRecognitionActive = isNowListening;
 		if (isNowListening) {
-			toast('🎤 Listening for voice commands…');
+			toast.info('🎤 Listening for voice commands…');
 		} else {
-			toast('🎤 Voice recognition stopped.');
+			toast.info('🎤 Voice recognition stopped.');
 		}
 	}
 
@@ -286,7 +293,7 @@
 	});
 </script>
 
-<div class="flex h-screen flex-col bg-background overflow-hidden">
+<div class="flex h-screen flex-col overflow-hidden bg-background">
 	<header
 		class="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur"
 	>
@@ -337,7 +344,7 @@
 					{#if voiceRecognitionActive}
 						<!-- Pulsing ring when listening -->
 						<span
-							class="absolute inset-0 rounded-full border-2 border-rose-500/60 animate-ping opacity-75"
+							class="absolute inset-0 animate-ping rounded-full border-2 border-rose-500/60 opacity-75"
 						></span>
 						<LucideMic class="h-4 w-4" />
 					{:else}
@@ -351,8 +358,8 @@
 	<!-- Floating transcript banner (fades in when a voice command is heard) -->
 	{#if lastTranscript}
 		<div
-			class="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full border border-rose-500/30 bg-background/90 px-4 py-1.5
-				text-xs font-medium text-rose-400 shadow-lg backdrop-blur animate-fade-in"
+			class="animate-fade-in fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full border border-rose-500/30 bg-background/90 px-4
+				py-1.5 text-xs font-medium text-rose-400 shadow-lg backdrop-blur"
 		>
 			🎤 {lastTranscript}
 		</div>
@@ -452,15 +459,16 @@
 			use:enhance={() => {
 				isSaving = true;
 				return async ({ result, update }) => {
+					workoutCompletionResult = result;
 					isSaving = false;
-					if (result.type === 'success') {
-						toast.success('Workout saved! 🎉');
-					} else if (result.type === 'failure') {
-						const msg = (result.data as Record<string, string>)?.error ?? 'Failed to save workout.';
-						toast.error(msg);
-					} else {
-						toast.error('Something went wrong saving your workout.');
-					}
+					// if (result.type === 'success') {
+					// 	toast.success('Workout saved! 🎉');
+					// } else if (result.type === 'failure') {
+					// 	const msg = (result.data as Record<string, string>)?.error ?? 'Failed to save workout.';
+					// 	toast.error(msg);
+					// } else {
+					// 	toast.error('Something went wrong saving your workout.');
+					// }
 					await update({ reset: false });
 				};
 			}}
@@ -477,47 +485,68 @@
 		<div class="flex flex-1 flex-col gap-6 overflow-y-auto p-4 pb-20">
 			<!-- Trophy badge -->
 			<div class="flex flex-col items-center gap-3 pt-6">
-				<div
-					class="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 shadow-lg shadow-primary/20"
-				>
-					<span class="text-5xl">🏆</span>
-				</div>
-				<div class="text-center">
-					<h2 class="text-2xl font-black">Workout Complete!</h2>
-					<p class="mt-1 text-sm text-muted-foreground">
-						{getExerciseName(completedWorkout.exercise)} · {formatDuration(completedWorkout.durationSeconds)}
-					</p>
-					{#if isSaving}
-						<p class="mt-1 text-xs text-primary animate-pulse">Saving to your records…</p>
-					{:else}
-						<p class="mt-1 text-xs text-green-500 flex items-center justify-center gap-1">
-							<LucideCheck class="h-3 w-3" /> Saved
+				{#if workoutCompletionResult?.data?.error}
+					<div
+						class="flex h-32 w-20 items-center justify-center rounded-full bg-destructive/15 shadow-lg shadow-destructive/20"
+					>
+						<span class="text-5xl">❗</span>
+					</div>
+					<div class="h-full text-center">
+						<h2 class="text-2xl font-black">Your workout was not saved</h2>
+						<p class="mt-1 text-sm text-muted-foreground">
+							{getExerciseName(completedWorkout.exercise)} · {formatDuration(
+								completedWorkout.durationSeconds
+							)}
 						</p>
-					{/if}
-				</div>
+						<p>{workoutCompletionResult?.data?.error}</p>
+					</div>
+				{:else}
+					<div
+						class="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 shadow-lg shadow-primary/20"
+					>
+						<span class="text-5xl">🏆</span>
+					</div>
+					<div class="text-center">
+						<h2 class="text-2xl font-black">Workout Complete!</h2>
+						<p class="mt-1 text-sm text-muted-foreground">
+							{getExerciseName(completedWorkout.exercise)} · {formatDuration(
+								completedWorkout.durationSeconds
+							)}
+						</p>
+						{#if isSaving}
+							<p class="mt-1 animate-pulse text-xs text-primary">Saving to your records…</p>
+						{:else}
+							<p class="mt-1 flex items-center justify-center gap-1 text-xs text-green-500">
+								<LucideCheck class="h-3 w-3" /> Saved
+							</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<!-- Stats grid -->
-			<div class="grid grid-cols-3 gap-3">
-				<div class="rounded-xl border border-border bg-card p-4 text-center">
-					<p class="text-3xl font-black text-primary">{completedWorkout.totalReps}</p>
-					<p class="mt-0.5 text-xs font-semibold text-muted-foreground">Total Reps</p>
+			{#if !workoutCompletionResult?.data?.error}
+				<div class="grid grid-cols-3 gap-3">
+					<div class="rounded-xl border border-border bg-card p-4 text-center">
+						<p class="text-3xl font-black text-primary">{completedWorkout.totalReps}</p>
+						<p class="mt-0.5 text-xs font-semibold text-muted-foreground">Total Reps</p>
+					</div>
+					<div class="rounded-xl border border-border bg-card p-4 text-center">
+						<p
+							class="text-3xl font-black {completedWorkout.avgFormScore >= 70
+								? 'text-green-500'
+								: 'text-yellow-500'}"
+						>
+							{completedWorkout.avgFormScore}%
+						</p>
+						<p class="mt-0.5 text-xs font-semibold text-muted-foreground">Avg Form</p>
+					</div>
+					<div class="rounded-xl border border-border bg-card p-4 text-center">
+						<p class="text-3xl font-black text-primary">{completedWorkout.sets.length}</p>
+						<p class="mt-0.5 text-xs font-semibold text-muted-foreground">Sets</p>
+					</div>
 				</div>
-				<div class="rounded-xl border border-border bg-card p-4 text-center">
-					<p
-						class="text-3xl font-black {completedWorkout.avgFormScore >= 70
-							? 'text-green-500'
-							: 'text-yellow-500'}"
-					>
-						{completedWorkout.avgFormScore}%
-					</p>
-					<p class="mt-0.5 text-xs font-semibold text-muted-foreground">Avg Form</p>
-				</div>
-				<div class="rounded-xl border border-border bg-card p-4 text-center">
-					<p class="text-3xl font-black text-primary">{completedWorkout.sets.length}</p>
-					<p class="mt-0.5 text-xs font-semibold text-muted-foreground">Sets</p>
-				</div>
-			</div>
+			{/if}
 
 			<!-- Sets breakdown -->
 			{#if completedWorkout.sets.length > 0}
@@ -535,23 +564,27 @@
 			{/if}
 
 			<div class="mt-auto flex gap-3">
-				<Button variant="outline" class="flex-1" size="lg" href={resolve('/dashboard/reports')}>
-					View Reports
-				</Button>
+				{#if !workoutCompletionResult?.data?.error}
+					<Button variant="outline" class="flex-1" size="lg" href={resolve('/dashboard/reports')}>
+						View Reports
+					</Button>
+				{/if}
 				<Button class="flex-1" size="lg" onclick={resetToStart}>
 					<LucidePlay class="mr-2 h-5 w-5" />
 					New Workout
 				</Button>
 			</div>
 		</div>
-
 	{:else}
 		<!-- Session layout: stacked on mobile, side-by-side on md+ -->
-		<div class="session-layout flex flex-1 flex-col gap-3 overflow-hidden p-3 md:flex-row md:gap-4 md:p-4">
-
+		<div
+			class="session-layout flex flex-1 flex-col gap-3 overflow-hidden p-3 md:flex-row md:gap-4 md:p-4"
+		>
 			<!-- Camera feed -->
-			<div class="session-camera relative min-w-0 overflow-hidden rounded-2xl bg-black md:flex-1
-				max-h-[45vh] md:max-h-none">
+			<div
+				class="session-camera relative max-h-[45vh] min-w-0 overflow-hidden rounded-2xl bg-black
+				md:max-h-none md:flex-1"
+			>
 				<PoseDetector
 					exercise={selectedExercise}
 					onRepCount={handleRepCount}
@@ -568,7 +601,7 @@
 						<div class="safety-alert-icon rounded-full bg-red-500 p-4 shadow-lg shadow-red-500/50">
 							<LucideShieldAlert class="h-10 w-10" />
 						</div>
-						<div class="text-center px-6">
+						<div class="px-6 text-center">
 							<p class="text-xl font-black tracking-wide">Improper Form Detected</p>
 							<p class="mt-1 text-sm font-medium text-white/90">
 								Poor form detected for {SAFETY_ALERT_DELAY / 1000}+ seconds.<br />
@@ -577,7 +610,7 @@
 						</div>
 						<button
 							type="button"
-							class="mt-1 rounded-full border border-white/40 bg-white/20 px-4 py-1.5 text-xs font-bold hover:bg-white/30 active:scale-95 transition-all"
+							class="mt-1 rounded-full border border-white/40 bg-white/20 px-4 py-1.5 text-xs font-bold transition-all hover:bg-white/30 active:scale-95"
 							onclick={() => (safetyAlertVisible = false)}
 						>
 							Dismiss
@@ -587,9 +620,11 @@
 
 				<!-- Voice listening indicator overlaid on camera -->
 				{#if voiceRecognitionActive}
-					<div class="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-full
-						bg-rose-500/80 px-3 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
-						<span class="h-1.5 w-1.5 rounded-full bg-white animate-pulse"></span>
+					<div
+						class="absolute right-3 bottom-3 z-10 flex items-center gap-1.5 rounded-full
+						bg-rose-500/80 px-3 py-1 text-[10px] font-bold text-white backdrop-blur-sm"
+					>
+						<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-white"></span>
 						Listening
 					</div>
 				{/if}
@@ -603,7 +638,8 @@
 				<div class="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
 					<span class="text-xs font-bold">{getExerciseName(selectedExercise)}</span>
 					<span
-						class="rounded-full px-2 py-0.5 text-[10px] font-bold text-white {exerciseState === 'down'
+						class="rounded-full px-2 py-0.5 text-[10px] font-bold text-white {exerciseState ===
+						'down'
 							? 'bg-green-500'
 							: exerciseState === 'up'
 								? 'bg-blue-500'
@@ -642,7 +678,9 @@
 						variant="outline"
 						size="sm"
 						class="w-full text-xs"
-						onclick={() => { currentSetReps = 0; }}
+						onclick={() => {
+							currentSetReps = 0;
+						}}
 					>
 						<LucideRotateCcw class="mr-1 h-3.5 w-3.5" />
 						Reset
@@ -698,8 +736,10 @@
 					<div class="mb-2 flex items-center justify-between">
 						<span class="text-xs font-bold">Voice Assistant</span>
 						{#if voiceRecognitionActive}
-							<span class="flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-500">
-								<span class="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+							<span
+								class="flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-500"
+							>
+								<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500"></span>
 								Listening
 							</span>
 						{/if}
@@ -769,7 +809,9 @@
 						variant="outline"
 						class="w-full"
 						size="sm"
-						onclick={() => { currentSetReps = 0; }}
+						onclick={() => {
+							currentSetReps = 0;
+						}}
 					>
 						<LucideRotateCcw class="mr-1.5 h-4 w-4" />
 						Reset Reps

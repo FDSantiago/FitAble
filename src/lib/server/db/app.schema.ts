@@ -63,5 +63,24 @@ export const userSettings = pgTable('user_settings', {
 	realTimeVoiceAlerts: boolean('real_time_voice_alerts').default(true).notNull(),
 	realTimeFormCorrection: boolean('real_time_form_correction').default(true).notNull(),
 	gestureAutoCounting: boolean('gesture_auto_counting').default(true).notNull(),
-	defaultCamera: varchar('default_camera', { length: 50 }).default('Front Camera').notNull()
+	defaultCamera: varchar('default_camera', { length: 50 }).default('Front Camera').notNull(),
+	darkmode: boolean('darkmode').default(false).notNull()
+});
+
+export const fitnessGoals = pgTable('fitness_goals', {
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	userId: text('user_id')
+		.references(() => user.id, { onDelete: 'cascade' })
+		.notNull(),
+	title: varchar('title', { length: 255 }).notNull(),
+	targetWorkouts: integer('target_workouts').notNull(),
+	daysDuration: integer('days_duration').notNull(),
+	startDate: timestamp('start_date').defaultNow().notNull(),
+	endDate: timestamp('end_date').notNull(),
+	status: varchar('status', { length: 20 })
+		.$type<'active' | 'completed' | 'cancelled'>()
+		.default('active')
+		.notNull()
 });

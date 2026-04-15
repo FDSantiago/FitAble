@@ -7,6 +7,9 @@
 
 	let { data } = $props();
 
+	type Granularity = 'daily' | 'weekly' | 'monthly';
+	let granularity = $state<Granularity>('daily');
+
 	// ── helpers ──────────────────────────────────────────────────────────────
 
 	function formatDate(iso: string) {
@@ -26,16 +29,59 @@
 		return 'score-red';
 	}
 
-	// ── chart ────────────────────────────────────────────────────────────────
+	// ── chart data ────────────────────────────────────────────────────────────
 
 	const CHART_W = 320;
 	const CHART_H = 80;
 	const PAD_X = 10;
 	const PAD_Y = 8;
 
-	// Only use months that have data for the sparkline
+	const dailyData = $derived(() => {
+		const map = new Map<string, { total: number; count: number }>();
+		data.sessions.forEach((s) => {
+			const d = new Date(s.sessionDateTime);
+			const key = d.toISOString().split('T')[0];
+			const existing = map.get(key) ?? { total: 0, count: 0 };
+			existing.total += s.averageFormScore;
+			existing.count += 1;
+			map.set(key, existing);
+		});
+		return Array.from(map.entries())
+			.map(([key, val]) => ({
+				label: new Date(key).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+				score: val.count > 0 ? val.total / val.count : null
+			}))
+			.sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+	});
+
+	const weeklyData = $derived(() => {
+		const map = new Map<string, { total: number; count: number }>();
+		data.sessions.forEach((s) => {
+			const d = new Date(s.sessionDateTime);
+			const weekStart = new Date(d);
+			weekStart.setDate(d.getDate() - d.getDay());
+			const key = weekStart.toISOString().split('T')[0];
+			const existing = map.get(key) ?? { total: 0, count: 0 };
+			existing.total += s.averageFormScore;
+			existing.count += 1;
+			map.set(key, existing);
+		});
+		return Array.from(map.entries())
+			.map(([key, val]) => ({
+				label: `Wk ${new Date(key).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+				score: val.count > 0 ? val.total / val.count : null
+			}))
+			.sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+	});
+
+	const chartData = $derived(() => {
+		if (granularity === 'daily') return dailyData();
+		if (granularity === 'weekly') return weeklyData();
+		return data.monthlyData;
+	});
+
 	const chartPoints = $derived(() => {
-		const withData = data.monthlyData.filter((m) => m.score !== null);
+		const withData = chartData().filter((m) => m.score !== null);
 		if (withData.length < 2) return null;
 
 		const scores = withData.map((m) => m.score as number);
@@ -51,15 +97,13 @@
 
 		const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-		// Filled area below line
 		const areaD =
-			pathD +
-			` L ${points.at(-1)!.x} ${CHART_H - PAD_Y} L ${points[0].x} ${CHART_H - PAD_Y} Z`;
+			pathD + ` L ${points.at(-1)!.x} ${CHART_H - PAD_Y} L ${points[0].x} ${CHART_H - PAD_Y} Z`;
 
 		return { points, pathD, areaD, withData };
 	});
 
-	const allLabels = $derived(() => data.monthlyData);
+	const allLabels = $derived(() => chartData());
 
 	// ── session detail ────────────────────────────────────────────────────────
 
@@ -70,20 +114,36 @@
 	<div class="px-4 py-6 sm:px-6 md:px-10 lg:px-16">
 		<main class="mx-auto w-full max-w-2xl">
 			<!-- Header -->
-			<header class="mb-6 pt-4">
+			<header class="mb-6 flex items-center justify-between gap-4 pt-4">
 				<h1 class="text-xl font-bold tracking-tight sm:text-2xl">Progress Reports</h1>
+
+				<!-- Granularity toggle -->
+				<div class="flex rounded-lg border border-border bg-muted p-0.5">
+					{#each ['daily', 'weekly', 'monthly'] as const as g}
+						<button
+							type="button"
+							class="rounded-md px-3 py-1.5 text-xs font-bold transition-all
+							{granularity === g
+								? 'bg-background text-foreground shadow-sm'
+								: 'text-muted-foreground hover:text-foreground'}"
+							onclick={() => (granularity = g)}
+						>
+							{g.charAt(0).toUpperCase() + g.slice(1)}
+						</button>
+					{/each}
+				</div>
 			</header>
 
 			<!-- Average Form Score Card -->
 			<section class="mb-6">
-				<div class="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+				<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
 					<!-- Headline -->
-					<div class="px-5 pt-5 pb-2 flex items-start justify-between gap-4">
+					<div class="flex items-start justify-between gap-4 px-5 pt-5 pb-2">
 						<div>
-							<p class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase mb-1">
+							<p class="mb-1 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
 								Average Form Score
 							</p>
-							<p class="text-4xl font-black tracking-tight leading-none">
+							<p class="text-4xl leading-none font-black tracking-tight">
 								{data.overallAvgFormScore > 0 ? `${data.overallAvgFormScore}%` : '--'}
 							</p>
 						</div>
@@ -123,7 +183,11 @@
 							>
 								<defs>
 									<linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
-										<stop offset="0%" stop-color="var(--color-primary, #10b981)" stop-opacity="0.18" />
+										<stop
+											offset="0%"
+											stop-color="var(--color-primary, #10b981)"
+											stop-opacity="0.18"
+										/>
 										<stop
 											offset="100%"
 											stop-color="var(--color-primary, #10b981)"
@@ -195,7 +259,7 @@
 								aria-label="View details for {session.exerciseName}"
 							>
 								<div class="min-w-0">
-									<p class="text-sm font-bold leading-tight">{session.exerciseName}</p>
+									<p class="text-sm leading-tight font-bold">{session.exerciseName}</p>
 									<p class="mt-0.5 text-xs text-muted-foreground">
 										{formatDate(session.sessionDateTime)} • {session.repsCompleted} Reps
 									</p>
@@ -217,11 +281,13 @@
 							<!-- Expandable detail panel -->
 							{#if selectedSession?.id === session.id}
 								<div
-									class="rounded-2xl border border-border bg-muted/30 px-4 py-4 -mt-1 mb-1 animate-in slide-in-from-top-2 fade-in duration-150"
+									class="-mt-1 mb-1 animate-in rounded-2xl border border-border bg-muted/30 px-4 py-4 duration-150 fade-in slide-in-from-top-2"
 								>
 									<div class="grid grid-cols-3 gap-3">
 										<div class="text-center">
-											<p class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+											<p
+												class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+											>
 												Form Score
 											</p>
 											<p
@@ -232,16 +298,24 @@
 											</p>
 										</div>
 										<div class="text-center">
-											<p class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+											<p
+												class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+											>
 												Reps
 											</p>
 											<p class="text-xl font-black">{session.repsCompleted}</p>
 										</div>
 										<div class="text-center">
-											<p class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+											<p
+												class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+											>
 												Duration
 											</p>
-											<p class="text-xl font-black">{session.durationMinutes}<span class="text-xs font-normal text-muted-foreground">m</span></p>
+											<p class="text-xl font-black">
+												{session.durationMinutes}<span
+													class="text-xs font-normal text-muted-foreground">m</span
+												>
+											</p>
 										</div>
 									</div>
 
@@ -254,7 +328,9 @@
 										<div class="h-2 w-full overflow-hidden rounded-full bg-muted">
 											<div
 												class="h-full rounded-full transition-all duration-700"
-												style="width: {session.averageFormScore}%; background-color: {scoreColor(session.averageFormScore)}"
+												style="width: {session.averageFormScore}%; background-color: {scoreColor(
+													session.averageFormScore
+												)}"
 											></div>
 										</div>
 									</div>

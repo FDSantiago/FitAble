@@ -1,4 +1,4 @@
-	<script lang="ts">
+<script lang="ts">
 	import LucideUserRound from '~icons/lucide/user-round';
 	import LucidePlay from '~icons/lucide/play';
 	import LucideCamera from '~icons/lucide/camera';
@@ -8,6 +8,7 @@
 	import LucideMinus from '~icons/lucide/minus';
 	import LucideClock from '~icons/lucide/clock';
 	import LucideDumbbell from '~icons/lucide/dumbbell';
+	import LucideTarget from '~icons/lucide/target';
 
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -103,7 +104,9 @@
 					<!-- Workouts this week -->
 					<Card.Root class="border-border shadow-sm">
 						<Card.Header class="p-3 pb-2 sm:p-4">
-							<Card.Title class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+							<Card.Title
+								class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+							>
 								Workouts
 							</Card.Title>
 						</Card.Header>
@@ -128,7 +131,9 @@
 					<!-- Avg Form Score -->
 					<Card.Root class="border-border shadow-sm">
 						<Card.Header class="p-3 pb-2 sm:p-4">
-							<Card.Title class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+							<Card.Title
+								class="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+							>
 								Avg Form Score
 							</Card.Title>
 						</Card.Header>
@@ -180,6 +185,44 @@
 								class="h-full rounded-full bg-primary transition-all duration-500"
 								style="width: {weeklyProgress}%"
 							></div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Active Fitness Goals -->
+				{#if data.activeGoals && data.activeGoals.length > 0}
+					<div class="mt-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+						<div class="mb-3 flex items-center justify-between">
+							<p class="text-xs font-semibold text-muted-foreground">Active Goals</p>
+							<a
+								href={resolve('/dashboard/goals')}
+								class="text-xs font-semibold text-primary hover:underline"
+							>
+								View All
+							</a>
+						</div>
+						<div class="flex flex-col gap-3">
+							{#each data.activeGoals as goal (goal.id)}
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<LucideTarget class="h-4 w-4 text-primary" />
+										<span class="text-sm font-medium">{goal.title}</span>
+									</div>
+									<div class="text-right">
+										<span class="text-xs font-bold text-primary">{goal.progress}%</span>
+										<p class="text-[10px] text-muted-foreground">
+											{goal.completedWorkouts}/{goal.targetWorkouts} workouts · {goal.daysLeft}d
+											left
+										</p>
+									</div>
+								</div>
+								<div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+									<div
+										class="h-full rounded-full bg-primary transition-all duration-500"
+										style="width: {goal.progress}%"
+									></div>
+								</div>
+							{/each}
 						</div>
 					</div>
 				{/if}

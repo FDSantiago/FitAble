@@ -35,6 +35,8 @@ const CATEGORY_COOLDOWNS: Record<string, number> = {
 	session: 0
 };
 
+let recentUtteredWord = "";
+
 class VoiceCoachService {
 	private enabled = true;
 	private queue: QueuedUtterance[] = [];
@@ -154,10 +156,14 @@ class VoiceCoachService {
 	// ─── Convenience helpers ───────────────────────────────────────────────
 
 	sayWorkoutStarted(exerciseName: string): void {
+		if (recentUtteredWord == "workout-started") return;
+		recentUtteredWord = "workout-started"
 		this.speak(`${exerciseName} started. Let's go!`, 'session', 'normal');
 	}
 
 	sayWorkoutEnded(): void {
+		if (recentUtteredWord == "workout-ended") return;
+		recentUtteredWord = "workout-ended"
 		this.speak('Workout complete. Nice job!', 'session', 'normal');
 	}
 
@@ -181,6 +187,8 @@ class VoiceCoachService {
 	}
 
 	sayFormWarning(score: number): void {
+		if (recentUtteredWord == "watch-form") return;
+		recentUtteredWord = "watch-form"
 		if (score < 70) {
 			this.speak('Watch your form', 'form', 'normal');
 		}

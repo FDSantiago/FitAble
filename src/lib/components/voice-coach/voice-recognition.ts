@@ -13,13 +13,7 @@
  *   "unmute" | "voice on"                      → "unmute"
  */
 
-export type VoiceCommand =
-	| 'start'
-	| 'finish-set'
-	| 'reset'
-	| 'end-workout'
-	| 'mute'
-	| 'unmute';
+export type VoiceCommand = 'start' | 'finish-set' | 'reset' | 'end-workout' | 'mute' | 'unmute';
 
 export interface VoiceCommandEvent extends CustomEvent {
 	detail: { command: VoiceCommand; transcript: string };
@@ -72,7 +66,7 @@ const COMMAND_PATTERNS: Array<{ patterns: string[]; command: VoiceCommand }> = [
 	{ patterns: ['reset reps', 'reset rep', 'reset'], command: 'reset' },
 	{ patterns: ['voice on', 'unmute', 'enable voice', 'sound on'], command: 'unmute' },
 	{ patterns: ['voice off', 'mute', 'quiet', 'silence', 'sound off'], command: 'mute' },
-	{ patterns: ["let's go", 'lets go', 'start', 'begin', 'go'], command: 'start' },
+	{ patterns: ["let's go", 'lets go', 'start', 'begin', 'begin workout', 'go'], command: 'start' },
 	{ patterns: ['stop', 'finish'], command: 'end-workout' }
 ];
 
@@ -110,12 +104,12 @@ class VoiceRecognitionService {
 		if (typeof window === 'undefined') return;
 
 		const SpeechRecognitionCtor =
-			(window as unknown as Record<string, unknown>).SpeechRecognition as
+			((window as unknown as Record<string, unknown>).SpeechRecognition as
 				| (new () => SpeechRecognitionInstance)
-				| undefined ??
-			(window as unknown as Record<string, unknown>).webkitSpeechRecognition as
+				| undefined) ??
+			((window as unknown as Record<string, unknown>).webkitSpeechRecognition as
 				| (new () => SpeechRecognitionInstance)
-				| undefined;
+				| undefined);
 
 		if (!SpeechRecognitionCtor) return;
 
@@ -123,26 +117,22 @@ class VoiceRecognitionService {
 		this._buildRecognition(SpeechRecognitionCtor);
 	}
 
-	private _buildRecognition(
-		Ctor: new () => SpeechRecognitionInstance
-	): void {
+	private _buildRecognition(Ctor: new () => SpeechRecognitionInstance): void {
 		const r = new Ctor();
 		r.continuous = true;
-		r.interimResults = false;
+		r.interimResults = true;
 		r.lang = 'en-US';
 		r.maxAlternatives = 3;
 
 		r.onresult = (event: SpeechRecognitionResultEvent) => {
-			for (let i = event.resultIndex; i < event.results.length; i++) {
+			for (let i = 0; i < event.results.length; i++) {
 				const result = event.results[i];
-				if (!result.isFinal) continue;
-
 				for (let j = 0; j < result.length; j++) {
 					const transcript = result[j].transcript;
 					const command = matchCommand(transcript);
 					if (command) {
 						this._dispatchCommand(command, transcript);
-						break;
+						return;
 					}
 				}
 			}

@@ -1,8 +1,13 @@
 import type { PageServerLoad } from './$types.js';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { workoutSessions, exercises, studentProfiles } from '$lib/server/db/app.schema';
-import { eq, desc, and, gte, lt } from 'drizzle-orm';
+import {
+	workoutSessions,
+	exercises,
+	studentProfiles,
+	fitnessGoals
+} from '$lib/server/db/app.schema';
+import { eq, desc, and, gte, lt, lte, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) {
@@ -37,7 +42,9 @@ export const load: PageServerLoad = async (event) => {
 		})
 		.from(workoutSessions)
 		.innerJoin(exercises, eq(workoutSessions.exerciseId, exercises.id))
-		.where(and(eq(workoutSessions.userId, userId), gte(workoutSessions.sessionDateTime, thisWeekStart)))
+		.where(
+			and(eq(workoutSessions.userId, userId), gte(workoutSessions.sessionDateTime, thisWeekStart))
+		)
 		.orderBy(desc(workoutSessions.sessionDateTime));
 
 	// --- Fetch last week sessions (for comparison) ---
@@ -93,6 +100,45 @@ export const load: PageServerLoad = async (event) => {
 		where: eq(studentProfiles.userId, userId)
 	});
 
+	// --- Active fitness goals with progress ---
+	const activeGoals = await db.query.fitnessGoals.findMany({
+		where: and(eq(fitnessGoals.userId, userId), eq(fitnessGoals.status, 'active'))
+	});
+
+	const activeGoalsWithProgress = await Promise.all(
+		activeGoals.map(async (goal) => {
+			const workoutsInPeriod = await db
+				.select({ count: sql<number>`count(*)::int` })
+				.from(workoutSessions)
+				.where(
+					and(
+						eq(workoutSessions.userId, userId),
+						gte(workoutSessions.sessionDateTime, goal.startDate),
+						lte(workoutSessions.sessionDateTime, goal.endDate)
+					)
+				);
+
+			const completedWorkouts = workoutsInPeriod[0]?.count ?? 0;
+			const progress = Math.min(100, Math.round((completedWorkouts / goal.targetWorkouts) * 100));
+			const daysLeft = Math.max(
+				0,
+				Math.ceil((new Date(goal.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+			);
+
+			return {
+				id: goal.id,
+				title: goal.title,
+				targetWorkouts: goal.targetWorkouts,
+				daysDuration: goal.daysDuration,
+				completedWorkouts,
+				progress,
+				daysLeft,
+				startDate: goal.startDate.toISOString(),
+				endDate: goal.endDate.toISOString()
+			};
+		})
+	);
+
 	return {
 		weeklyStats: {
 			workoutCount: weeklyWorkoutCount,
@@ -107,6 +153,7 @@ export const load: PageServerLoad = async (event) => {
 			averageFormScore: Math.round(Number(s.averageFormScore)),
 			repsCompleted: s.repsCompleted,
 			durationMinutes: s.durationMinutes
-		}))
+		})),
+		activeGoals: activeGoalsWithProgress
 	};
 };

@@ -2,9 +2,10 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 
+	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from 'svelte-sonner';
 	import { getFlash } from 'sveltekit-flash-message';
-	import { page } from '$app/state'; // used to be $app/stores
+	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 
 	import LucideCircleX from '~icons/lucide/circle-x';
@@ -30,6 +31,7 @@
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
+<ModeWatcher defaultMode="light" />
 <Toaster
 	richColors
 	theme="light"

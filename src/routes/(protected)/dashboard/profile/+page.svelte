@@ -477,27 +477,55 @@
 
 			<section class="mb-6">
 				<h3 class="mb-3 text-sm font-bold text-foreground">Current Goals</h3>
-				<div class="rounded-xl border border-border bg-card p-4 shadow-sm">
-					<div class="flex items-center gap-4">
-						<div
-							class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
-						>
-							<LucideTarget class="h-6 w-6" />
-						</div>
-						<div class="flex-1">
-							<p class="font-bold text-foreground">{goals.title}</p>
-							<p class="text-xs text-muted-foreground">
-								Currently at {goals.progress}/{goals.target} this week
-							</p>
-							<div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-								<div
-									class="h-full rounded-full bg-primary transition-all"
-									style="width: {(goals.progress / goals.target) * 100}%"
-								></div>
+				{#if data.activeGoals && data.activeGoals.length > 0}
+					<div class="flex flex-col gap-3">
+						{#each data.activeGoals as goal (goal.id)}
+							<div class="rounded-xl border border-border bg-card p-4 shadow-sm">
+								<div class="flex items-center gap-4">
+									<div
+										class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+									>
+										<LucideTarget class="h-6 w-6" />
+									</div>
+									<div class="flex-1">
+										<p class="font-bold text-foreground">{goal.title}</p>
+										<p class="text-xs text-muted-foreground">
+											{goal.completedWorkouts}/{goal.targetWorkouts} workouts · {goal.daysLeft} days left
+										</p>
+										<div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+											<div
+												class="h-full rounded-full bg-primary transition-all"
+												style="width: {goal.progress}%"
+											></div>
+										</div>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="rounded-xl border border-border bg-card p-4 shadow-sm">
+						<div class="flex items-center gap-4">
+							<div
+								class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+							>
+								<LucideTarget class="h-6 w-6" />
+							</div>
+							<div class="flex-1">
+								<p class="font-bold text-foreground">{goals.title}</p>
+								<p class="text-xs text-muted-foreground">
+									Currently at {goals.progress}/{goals.target} this week
+								</p>
+								<div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+									<div
+										class="h-full rounded-full bg-primary transition-all"
+										style="width: {(goals.progress / goals.target) * 100}%"
+									></div>
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+				{/if}
 			</section>
 
 			<section class="mb-6">
@@ -530,9 +558,7 @@
 </div>
 
 {#if showEmailModal}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-	>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 		<div class="mx-4 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg">
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-lg font-bold">Change Email Address</h2>
