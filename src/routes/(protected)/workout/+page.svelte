@@ -11,6 +11,7 @@
 	import LucideMicOff from '~icons/lucide/mic-off';
 	import LucideVolume2 from '~icons/lucide/volume-2';
 	import LucideVolumeX from '~icons/lucide/volume-x';
+	import LucideFlipHorizontal from '~icons/lucide/flip-horizontal';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { enhance } from '$app/forms';
@@ -57,6 +58,7 @@
 	let voiceRecognitionActive = $state(false);
 	let voiceCoachSupported = $state(false);
 	let voiceRecognitionSupported = $state(false);
+	let isMirrored = $state(false);
 	/** Last recognised transcript shown in the UI briefly */
 	let lastTranscript = $state('');
 	let transcriptTimer: ReturnType<typeof setTimeout> | null = null;
@@ -311,6 +313,19 @@
 
 		<!-- Voice controls (always visible during session; also shown on start screen) -->
 		<div class="flex items-center gap-1.5">
+			<button
+				id="mirror-toggle"
+				type="button"
+				title={isMirrored ? 'Unmirror camera' : 'Mirror camera'}
+				class="relative flex h-8 w-8 items-center justify-center rounded-full border transition-all
+					{isMirrored
+					? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
+					: 'border-border bg-card text-muted-foreground hover:border-primary/50'}"
+				onclick={() => (isMirrored = !isMirrored)}
+			>
+				<LucideFlipHorizontal class="h-4 w-4" />
+			</button>
+
 			{#if voiceCoachSupported}
 				<button
 					id="voice-coach-toggle"
@@ -583,6 +598,7 @@
 					onStateChange={handleStateChange}
 					onSafetyAlert={handleSafetyAlert}
 					badFormAlertDelay={SAFETY_ALERT_DELAY}
+					mirror={isMirrored}
 				/>
 
 				{#if safetyAlertVisible}

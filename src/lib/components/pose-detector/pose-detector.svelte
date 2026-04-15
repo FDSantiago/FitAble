@@ -55,7 +55,8 @@
 		onAngleUpdate = () => {},
 		onSafetyAlert = () => {},
 		badFormThreshold = 70,
-		badFormAlertDelay = 5000
+		badFormAlertDelay = 5000,
+		mirror = false
 	}: {
 		exercise?: 'pushup' | 'squat' | 'situp' | 'jumpingjack';
 		onRepCount?: (count: number) => void;
@@ -68,6 +69,8 @@
 		badFormThreshold?: number;
 		/** Milliseconds of sustained bad form before alert fires. Default: 5000 */
 		badFormAlertDelay?: number;
+		/** Whether to mirror (horizontally flip) the camera feed. Default: false */
+		mirror?: boolean;
 	} = $props();
 
 	let videoElement: HTMLVideoElement;
@@ -311,12 +314,14 @@
 		canvasCtx.fillStyle = 'transparent';
 		canvasCtx.fillRect(0, 0, width, height);
 
+		const getX = (lm: Landmark) => (mirror ? width - lm.x * width : lm.x * width);
+
 		if (results.poseLandmarks) {
 			for (const landmark of results.poseLandmarks) {
 				if (landmark.visibility && landmark.visibility < POSE_CONFIDENCE_THRESHOLD) continue;
 
 				canvasCtx!.beginPath();
-				canvasCtx!.arc(landmark.x * width, landmark.y * height, 5, 0, 2 * Math.PI);
+				canvasCtx!.arc(getX(landmark), landmark.y * height, 5, 0, 2 * Math.PI);
 				canvasCtx!.fillStyle =
 					currentExerciseState === 'down'
 						? '#22c55e'
@@ -354,8 +359,8 @@
 					endLandmark.visibility > POSE_CONFIDENCE_THRESHOLD
 				) {
 					canvasCtx!.beginPath();
-					canvasCtx!.moveTo(startLandmark.x * width, startLandmark.y * height);
-					canvasCtx!.lineTo(endLandmark.x * width, endLandmark.y * height);
+					canvasCtx!.moveTo(getX(startLandmark), startLandmark.y * height);
+					canvasCtx!.lineTo(getX(endLandmark), endLandmark.y * height);
 					canvasCtx!.strokeStyle = color;
 					canvasCtx!.lineWidth = 3;
 					canvasCtx!.stroke();
@@ -466,13 +471,16 @@
 >
 	<video
 		bind:this={videoElement}
-		class="absolute inset-0 h-full w-full object-contain"
+		class={`
+			absolute inset-0 h-full w-full object-contain
+			${mirror ? 'scale-x-[-1]' : ''}
+		`}
 		autoplay
 		muted
 		playsinline
 		aria-label="Camera feed for exercise detection"
 	></video>
-	<canvas bind:this={canvasElement} class="absolute inset-0 h-full w-full" width="640" height="480"
+	<canvas bind:this={canvasElement} class="absolute inset-0 h-full w-full border border-amber-500 border-8" width="640" height="480"
 	></canvas>
 
 	<div
