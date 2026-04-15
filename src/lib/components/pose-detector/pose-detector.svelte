@@ -82,6 +82,7 @@
 	let isCameraRunning = $state(false);
 	let currentAngle = $state(0);
 	let detectionStatus = $state<'searching' | 'detected' | 'lost'>('searching');
+	let resizeObserver: ResizeObserver | null = null;
 
 	let repCount = $state(0);
 	let currentExerciseState: 'ready' | 'down' | 'up' = 'ready';
@@ -407,8 +408,18 @@
 			await camera.start();
 			isCameraRunning = true;
 
-			if (canvasElement) {
+			if (canvasElement && videoElement) {
+				canvasElement.width = videoElement.clientWidth;
+				canvasElement.height = videoElement.clientHeight;
 				canvasCtx = canvasElement.getContext('2d');
+
+				resizeObserver = new ResizeObserver(() => {
+					if (canvasElement && videoElement) {
+						canvasElement.width = videoElement.clientWidth;
+						canvasElement.height = videoElement.clientHeight;
+					}
+				});
+				resizeObserver.observe(videoElement);
 			}
 		} catch (error) {
 			console.error('Failed to initialize camera:', error);
@@ -417,6 +428,10 @@
 	}
 
 	function stopCamera(): void {
+		if (resizeObserver) {
+			resizeObserver.disconnect();
+			resizeObserver = null;
+		}
 		if (camera) {
 			camera.stop();
 			camera = null;
@@ -480,7 +495,9 @@
 		playsinline
 		aria-label="Camera feed for exercise detection"
 	></video>
-	<canvas bind:this={canvasElement} class="absolute inset-0 h-full w-full border border-amber-500 border-8" width="640" height="480"
+	<canvas
+		bind:this={canvasElement}
+		class="absolute inset-0 h-full w-full border border-8 border-amber-500"
 	></canvas>
 
 	<div
