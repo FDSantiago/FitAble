@@ -69,18 +69,6 @@
 			<LucideUserRound />
 			<span class="font-bold">Profile</span>
 		</a>
-
-		<a
-			href={resolve('/dashboard/settings')}
-			class="flex flex-col items-center gap-1 {$page.url.pathname.startsWith(
-				resolve('/dashboard/settings')
-			)
-				? 'text-primary'
-				: 'text-muted-foreground'}"
-		>
-			<LucideSettings />
-			<span class="font-bold">Settings</span>
-		</a>
 	</div>
 </nav>
 

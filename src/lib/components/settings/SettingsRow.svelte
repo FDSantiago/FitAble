@@ -34,7 +34,7 @@
 	});
 
 	function handleSwitchClick() {
-		onchange(localBoolValue);
+		onchange(!localBoolValue);
 	}
 
 	function handleSelectChange(option: string) {

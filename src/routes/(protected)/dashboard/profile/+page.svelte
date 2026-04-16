@@ -9,6 +9,7 @@
 	import LucideX from '~icons/lucide/x';
 	import LucideMail from '~icons/lucide/mail';
 	import LucideShieldCheck from '~icons/lucide/shield-check';
+	import LucideSettings from '~icons/lucide/settings';
 	import { Button } from '$lib/components/ui/button';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import { enhance } from '$app/forms';
@@ -121,6 +122,12 @@
 			<header class="mb-6 flex items-center justify-between pt-4 md:mb-8">
 				<h1 class="text-xl font-bold tracking-tight sm:text-2xl">Student Profile</h1>
 				<div class="flex gap-2">
+					<a
+						href={resolve('/dashboard/settings')}
+						class="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+					>
+						<LucideSettings class="h-4 w-4" />
+					</a>
 					{#if !isEditing}
 						<Button
 							variant="outline"
